@@ -113,6 +113,26 @@ preflight() {
     done
     ok "依赖齐全 (curl, awk, grep, sed)"
 
+    # zstd is required by Ollama's install.sh for binary extraction
+    if ! command -v zstd >/dev/null 2>&1; then
+        info "Ollama 需要 zstd 来解压安装包, 正在自动安装..."
+        if command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update -qq >/dev/null && sudo apt-get install -qq -y zstd >/dev/null
+        elif command -v dnf >/dev/null 2>&1; then
+            sudo dnf install -y -q zstd >/dev/null
+        elif command -v yum >/dev/null 2>&1; then
+            sudo yum install -y -q zstd >/dev/null
+        elif command -v pacman >/dev/null 2>&1; then
+            sudo pacman -S --noconfirm --quiet zstd >/dev/null
+        elif command -v apk >/dev/null 2>&1; then
+            sudo apk add -q zstd >/dev/null
+        else
+            die "未知包管理器, 请手动安装 zstd 后重跑"
+        fi
+        command -v zstd >/dev/null 2>&1 || die "zstd 安装失败, 请手动装后重跑"
+    fi
+    ok "zstd 已就绪"
+
     # disk check — use HOME since Ollama stores models under ~/.ollama by default
     avail_kb=$(df -Pk "$HOME" | awk 'NR==2 {print $4}')
     avail_gb=$((avail_kb / 1024 / 1024))
@@ -197,8 +217,15 @@ wait_service() {
 
     # make sure service is running (Ollama's install.sh already enables+starts it,
     # but belt & suspenders — also covers non-systemd userspace launch)
-    if command -v systemctl >/dev/null 2>&1; then
+    if command -v systemctl >/dev/null 2>&1 && systemctl --no-pager status >/dev/null 2>&1; then
         sudo systemctl enable --now ollama >/dev/null 2>&1 || true
+    else
+        # non-systemd environment (Docker, WSL, Termux, minimal chroot): start manually
+        if ! pgrep -x ollama >/dev/null 2>&1; then
+            info "无 systemd, 在后台启动 'ollama serve'"
+            OLLAMA_HOST="$LISTEN" nohup ollama serve >/tmp/ollama-installer.log 2>&1 &
+            sleep 1
+        fi
     fi
 
     endpoint="http://$LISTEN"
@@ -212,7 +239,7 @@ wait_service() {
         i=$((i + 1))
         sleep 1
     done
-    die "Ollama 服务 30s 内未就绪, 请手动检查: systemctl status ollama"
+    die "Ollama 服务 30s 内未就绪, 请手动检查: systemctl status ollama 或看 /tmp/ollama-installer.log"
 }
 
 # ---------------------------------------------------------------------------
