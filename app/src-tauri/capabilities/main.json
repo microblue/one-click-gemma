@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "default capability set for the installer window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "clipboard-manager:allow-write-text",
+    "shell:allow-open",
+    "dialog:allow-open",
+    "dialog:allow-message"
+  ]
+}

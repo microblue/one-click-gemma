@@ -1,0 +1,24 @@
+# Rust
+/app/src-tauri/target/
+Cargo.lock.bak
+
+# Tauri gen
+/app/src-tauri/gen/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# build artifacts
+/website/releases/*
+!/website/releases/.gitkeep
+
+# local
+.env
+.env.local

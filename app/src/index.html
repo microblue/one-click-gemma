@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gemma 4 一键安装</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+    <!-- Screen 1: welcome + preflight -->
+    <section class="screen" data-screen="welcome" hidden>
+      <div class="logo"></div>
+      <h1>Gemma 4 一键安装</h1>
+      <p class="sub">为 OpenClaw 准备一颗本地的 AI 大脑</p>
+
+      <ul class="check-list" id="check-list">
+        <li data-item="os"><span class="dot"></span><span class="label">操作系统</span><span class="value">…</span></li>
+        <li data-item="gpu"><span class="dot"></span><span class="label">显卡</span><span class="value">检测中…</span></li>
+        <li data-item="ram"><span class="dot"></span><span class="label">内存</span><span class="value">…</span></li>
+        <li data-item="disk"><span class="dot"></span><span class="label">磁盘</span><span class="value">…</span></li>
+        <li data-item="net"><span class="dot"></span><span class="label">网络</span><span class="value">…</span></li>
+      </ul>
+
+      <p class="errors" id="preflight-errors" hidden></p>
+
+      <button class="btn primary" id="btn-start" disabled>开始安装</button>
+      <p class="foot-note">将安装 Ollama 运行时 + Gemma 4 E4B 模型 (9.6 GB)</p>
+    </section>
+
+    <!-- Screen 2: installing -->
+    <section class="screen" data-screen="install" hidden>
+      <div class="spinner"></div>
+      <h2 id="install-title">正在安装…</h2>
+      <p class="sub" id="install-step">[1/3] 安装 Ollama 运行时</p>
+
+      <div class="progress">
+        <div class="bar" id="progress-bar"></div>
+      </div>
+      <p class="progress-label" id="progress-label">准备中…</p>
+
+      <pre class="log" id="install-log" hidden></pre>
+      <button class="btn-text" id="btn-toggle-log">显示详细日志</button>
+    </section>
+
+    <!-- Screen 3: done -->
+    <section class="screen" data-screen="done" hidden>
+      <div class="success-mark">✓</div>
+      <h2>全部就绪</h2>
+      <p class="sub">
+        Gemma 4 正在本机运行<br />
+        <code id="api-url">http://127.0.0.1:11434/v1</code>
+      </p>
+
+      <div class="openclaw-block" id="openclaw-block"></div>
+
+      <div class="actions">
+        <button class="btn" id="btn-test">发个测试消息</button>
+        <button class="btn primary" id="btn-finish">完成</button>
+      </div>
+
+      <div class="chat-panel" id="chat-panel" hidden>
+        <div class="chat-output" id="chat-output"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="你好, Gemma!" />
+          <button class="btn" id="btn-send">发送</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error overlay -->
+    <section class="screen error-overlay" data-screen="error" hidden>
+      <div class="error-mark">✗</div>
+      <h2>出了点问题</h2>
+      <pre class="error-text" id="error-text"></pre>
+      <div class="actions">
+        <button class="btn" id="btn-retry">重试</button>
+        <button class="btn primary" id="btn-quit">退出</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gemma 4 一键安装 · for OpenClaw</title>
+  <meta name="description" content="为 OpenClaw 准备一颗本地的 AI 大脑 · 双击即装,零命令行" />
+  <style>
+    :root {
+      --bg: #0b0c0e;
+      --fg: #f5f6f8;
+      --dim: #8b8f96;
+      --card: #15171b;
+      --border: #22252b;
+      --accent: #ff6b3d;
+      --accent-hover: #ff8458;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+    .wrap { width: 100%; max-width: 720px; }
+    header { margin-bottom: 40px; text-align: center; }
+    .logo {
+      display: inline-block;
+      width: 56px; height: 56px;
+      background: var(--accent);
+      border-radius: 14px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .logo::after {
+      content: "";
+      position: absolute;
+      inset: 16px;
+      border-radius: 6px;
+      background: var(--bg);
+      clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+    .sub { color: var(--dim); font-size: 17px; }
+    .platforms {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 640px) {
+      .platforms { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .card.primary {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255, 107, 61, 0.15);
+    }
+    .card .icon {
+      font-size: 28px;
+      line-height: 1;
+    }
+    .card .name {
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .card .hint {
+      font-size: 13px;
+      color: var(--dim);
+    }
+    .card a.btn {
+      display: inline-block;
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: var(--fg);
+      color: var(--bg);
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      transition: background 0.15s;
+      width: 100%;
+    }
+    .card.primary a.btn {
+      background: var(--accent);
+      color: #fff;
+    }
+    .card.primary a.btn:hover { background: var(--accent-hover); }
+    .card a.btn:hover { background: #d6d7db; }
+    .linux-block {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+    }
+    .linux-block .label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--dim);
+      margin-bottom: 10px;
+    }
+    pre {
+      background: #07080a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--fg);
+      overflow-x: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    pre code { flex: 1; }
+    .copy {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--dim);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .copy:hover { color: var(--fg); border-color: var(--fg); }
+    .foot {
+      text-align: center;
+      color: var(--dim);
+      font-size: 13px;
+    }
+    .foot a { color: var(--dim); text-decoration: underline; }
+    .foot a:hover { color: var(--fg); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo" aria-hidden="true"></div>
+      <h1>Gemma 4 一键安装</h1>
+      <p class="sub">为 OpenClaw 准备一颗本地的 AI 大脑 · 双击即装</p>
+    </header>
+
+    <section class="platforms" id="platforms">
+      <div class="card" data-os="mac">
+        <div class="icon"></div>
+        <div class="name">macOS</div>
+        <div class="hint">14 Sonoma+</div>
+        <a class="btn" id="dl-mac" href="releases/GemmaInstaller-1.0.0-universal.dmg" download>下载 DMG</a>
+      </div>
+      <div class="card" data-os="win">
+        <div class="icon">⊞</div>
+        <div class="name">Windows</div>
+        <div class="hint">10 / 11 x64</div>
+        <a class="btn" id="dl-win" href="releases/GemmaInstaller-1.0.0-x64-setup.exe" download>下载 EXE</a>
+      </div>
+      <div class="card" data-os="linux">
+        <div class="icon">🐧</div>
+        <div class="name">Linux</div>
+        <div class="hint">脚本安装</div>
+        <a class="btn" href="#linux">查看脚本</a>
+      </div>
+    </section>
+
+    <section class="linux-block" id="linux">
+      <div class="label">Linux · 在终端运行</div>
+      <pre><code id="cmd">curl -fsSL https://gemma-installer.example/install.sh | sh</code><button class="copy" onclick="copyCmd()">复制</button></pre>
+    </section>
+
+    <p class="foot">
+      Apache 2.0 · <a href="https://github.com/openclaw/openclaw">OpenClaw</a> · <a href="https://ollama.com">Ollama</a> · <a href="https://deepmind.google/models/gemma/gemma-4/">Gemma 4</a>
+    </p>
+  </div>
+
+  <script>
+    (function () {
+      var ua = navigator.userAgent.toLowerCase();
+      var primary = "linux";
+      if (/mac|darwin|iphone|ipad/.test(ua)) primary = "mac";
+      else if (/windows|win64|win32/.test(ua)) primary = "win";
+      else if (/linux|x11|ubuntu|fedora|debian/.test(ua)) primary = "linux";
+      var el = document.querySelector('[data-os="' + primary + '"]');
+      if (el) el.classList.add("primary");
+    })();
+
+    function copyCmd() {
+      var txt = document.getElementById("cmd").textContent;
+      navigator.clipboard.writeText(txt).then(function () {
+        var btn = document.querySelector(".copy");
+        var old = btn.textContent;
+        btn.textContent = "已复制 ✓";
+        setTimeout(function () { btn.textContent = old; }, 1500);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "local-gemma4",
+  "baseURL": "http://127.0.0.1:11434/v1",
+  "apiKey": "ollama",
+  "models": [
+    {
+      "id": "gemma4:e4b",
+      "name": "Gemma 4 E4B (Local)",
+      "contextWindow": 131072,
+      "supportsVision": true
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GemmaInstaller",
+  "version": "1.0.0",
+  "identifier": "com.gemma-installer.app",
+  "build": {
+    "frontendDist": "../src",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Gemma 4 一键安装",
+        "width": 640,
+        "height": 560,
+        "minWidth": 520,
+        "minHeight": 480,
+        "resizable": true,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* https://ollama.com https://registry.ollama.ai"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "nsis", "appimage", "deb"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "copyright": "Copyright 2026 gemma-installer contributors",
+    "category": "Utility",
+    "shortDescription": "Gemma 4 one-click installer for OpenClaw",
+    "longDescription": "Installs Google Gemma 4 locally via Ollama and wires a local-gemma4 provider into OpenClaw. Exposes an OpenAI-compatible API at http://127.0.0.1:11434/v1.",
+    "macOS": {
+      "minimumSystemVersion": "14.0"
+    },
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "perUser",
+        "displayLanguageSelector": false
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "ca-certificates", "curl"]
+      }
+    }
+  }
+}
