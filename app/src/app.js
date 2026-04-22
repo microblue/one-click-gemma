@@ -81,7 +81,8 @@ async function preflight() {
     setCheck("gpu", !!r.gpu, r.gpu || "未检测到 (将用 CPU, 会慢)");
     setCheck("ram", r.ramGb >= 8, `${r.ramGb} GB`);
     setCheck("disk", r.diskGb >= r.minDiskGb, `${r.diskGb} GB 可用`);
-    setCheck("net", r.networkOk, r.networkOk ? "可达 ollama.com" : "不可达");
+    setCheck("net", r.networkOk,
+      r.networkOk ? "可达 ollama.com" : `不可达: ${r.networkError || "未知"}`);
 
     const errBox = document.getElementById("preflight-errors");
     if (r.errors && r.errors.length) {

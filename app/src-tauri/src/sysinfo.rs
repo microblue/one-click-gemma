@@ -2,12 +2,14 @@ use serde::Serialize;
 use std::time::Duration;
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct PreflightReport {
     pub os: String,
     pub gpu: Option<String>,
     pub ram_gb: u64,
     pub disk_gb: u64,
     pub network_ok: bool,
+    pub network_error: Option<String>,
     pub min_disk_gb: u64,
     pub ok: bool,
     pub errors: Vec<String>,
@@ -20,7 +22,7 @@ pub async fn run_preflight() -> PreflightReport {
     let ram_gb = probe_ram_gb();
     let disk_gb = probe_disk_gb();
     let gpu = probe_gpu();
-    let network_ok = probe_network().await;
+    let (network_ok, network_error) = probe_network().await;
 
     let mut errors = Vec::new();
     if disk_gb < MIN_DISK_GB {
@@ -29,7 +31,10 @@ pub async fn run_preflight() -> PreflightReport {
         ));
     }
     if !network_ok {
-        errors.push("无法连接 ollama.com, 请检查网络".to_string());
+        errors.push(format!(
+            "无法连接 ollama.com ({}), 请检查网络",
+            network_error.as_deref().unwrap_or("未知错误")
+        ));
     }
 
     PreflightReport {
@@ -38,6 +43,7 @@ pub async fn run_preflight() -> PreflightReport {
         ram_gb,
         disk_gb,
         network_ok,
+        network_error,
         min_disk_gb: MIN_DISK_GB,
         ok: errors.is_empty(),
         errors,
@@ -128,18 +134,34 @@ fn probe_gpu() -> Option<String> {
     None
 }
 
-async fn probe_network() -> bool {
+async fn probe_network() -> (bool, Option<String>) {
     let client = match reqwest::Client::builder()
         .timeout(Duration::from_secs(5))
         .build()
     {
         Ok(c) => c,
-        Err(_) => return false,
+        Err(e) => return (false, Some(format!("build client: {e}"))),
     };
-    client
-        .head("https://ollama.com")
-        .send()
-        .await
-        .map(|r| r.status().is_success() || r.status().is_redirection())
-        .unwrap_or(false)
+    // HEAD first, fall back to GET — some servers dislike HEAD.
+    for method in &["HEAD", "GET"] {
+        let req = match *method {
+            "HEAD" => client.head("https://ollama.com"),
+            _ => client.get("https://ollama.com"),
+        };
+        match req.send().await {
+            Ok(r) if r.status().is_success() || r.status().is_redirection() => {
+                return (true, None);
+            }
+            Ok(r) => {
+                return (false, Some(format!("HTTP {}", r.status())));
+            }
+            Err(e) => {
+                // on the last attempt, surface the error
+                if *method == "GET" {
+                    return (false, Some(e.to_string()));
+                }
+            }
+        }
+    }
+    (false, Some("all probes failed".to_string()))
 }
