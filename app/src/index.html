@@ -14,6 +14,11 @@
       <h1>Gemma 4 一键安装</h1>
       <p class="sub">为 OpenClaw 准备一颗本地的 AI 大脑</p>
 
+      <div class="model-picker">
+        <div class="model-picker-label">选择模型</div>
+        <div class="model-options" id="model-options"><!-- radio cards injected by app.js --></div>
+      </div>
+
       <ul class="check-list" id="check-list">
         <li data-item="os"><span class="dot"></span><span class="label">操作系统</span><span class="value">…</span></li>
         <li data-item="gpu"><span class="dot"></span><span class="label">显卡</span><span class="value">检测中…</span></li>
@@ -25,7 +30,7 @@
       <p class="errors" id="preflight-errors" hidden></p>
 
       <button class="btn primary" id="btn-start" disabled>开始安装</button>
-      <p class="foot-note">将安装 Ollama 运行时 + Gemma 4 E4B 模型 (9.6 GB)</p>
+      <p class="foot-note" id="install-summary">将安装 Ollama 运行时 + 所选模型</p>
     </section>
 
     <!-- Screen 2: installing -->
@@ -56,6 +61,12 @@
       </p>
 
       <div class="openclaw-block" id="openclaw-block"></div>
+
+      <div class="prompt-block">
+        <div class="prompt-label">或者复制这段话发给 OpenClaw, 让它自己配置</div>
+        <pre class="prompt-body" id="openclaw-prompt">…</pre>
+        <button class="btn" id="btn-copy-prompt">📋 复制 prompt</button>
+      </div>
 
       <div class="actions">
         <button class="btn" id="btn-test">发个测试消息</button>
