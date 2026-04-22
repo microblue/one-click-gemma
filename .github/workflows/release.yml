@@ -306,7 +306,7 @@ jobs:
       # ---------- Linux AppImage smoke: Xvfb + launch + screenshot ----------
       - name: Install GUI smoke tools (Linux)
         if: matrix.os == 'ubuntu-22.04'
-        run: sudo apt-get install -y xvfb xdotool imagemagick
+        run: sudo apt-get install -y xvfb xdotool imagemagick x11-utils
 
       - name: Smoke-test the Linux AppImage (GUI)
         if: matrix.os == 'ubuntu-22.04'
