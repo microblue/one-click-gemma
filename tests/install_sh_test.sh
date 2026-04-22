@@ -84,23 +84,26 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# case 4: shellcheck clean (only run if installed)
+# case 4: shellcheck clean (only run if installed) — use a dedicated var so
+# we don't clobber the help output captured earlier
 # ---------------------------------------------------------------------------
 if command -v shellcheck >/dev/null 2>&1; then
-    if out=$(shellcheck -s sh "$SCRIPT" 2>&1); then
+    if sc_out=$(shellcheck -s sh "$SCRIPT" 2>&1); then
         pass "shellcheck:clean"
     else
-        fail "shellcheck:clean" "$out"
+        fail "shellcheck:clean" "$sc_out"
     fi
 else
     CASES+=("SKIP · shellcheck:clean (shellcheck not installed)")
 fi
 
 # ---------------------------------------------------------------------------
-# case 5: defaults in the help body are the documented ones
+# case 5: defaults in the help body are the documented ones. Re-capture
+# the help output freshly so this test doesn't depend on earlier state.
 # ---------------------------------------------------------------------------
-assert_contains "defaults:model"   "gemma4:e4b"        "$out"
-assert_contains "defaults:listen"  "127.0.0.1:11434"   "$out"
+help_out=$("$SCRIPT" --help 2>&1 || true)
+assert_contains "defaults:model"   "gemma4:e4b"        "$help_out"
+assert_contains "defaults:listen"  "127.0.0.1:11434"   "$help_out"
 
 # ---------------------------------------------------------------------------
 # case 6: --model=value kv form is accepted by parser (stops on first error)
