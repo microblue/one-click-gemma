@@ -7,7 +7,7 @@
 #   curl -fsSL https://<host>/install.sh | sh -s -- --model gemma4:26b --yes
 #
 # Flags:
-#   --model <tag>     Ollama model tag to pull            (default: gemma4:e4b)
+#   --model <tag>     Ollama model tag to pull            (default: gemma4:e2b)
 #   --listen <addr>   OLLAMA_HOST value                    (default: 127.0.0.1:11434)
 #   --no-openclaw     skip OpenClaw config injection
 #   --skip-pull       skip model download (useful for CI smoke tests)
@@ -19,7 +19,7 @@ set -eu
 # ---------------------------------------------------------------------------
 # defaults & flag parsing
 # ---------------------------------------------------------------------------
-MODEL="gemma4:e4b"
+MODEL="gemma4:e2b"
 LISTEN="127.0.0.1:11434"
 SKIP_OPENCLAW="0"
 SKIP_PULL="0"

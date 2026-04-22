@@ -102,7 +102,7 @@ fi
 # the help output freshly so this test doesn't depend on earlier state.
 # ---------------------------------------------------------------------------
 help_out=$("$SCRIPT" --help 2>&1 || true)
-assert_contains "defaults:model"   "gemma4:e4b"        "$help_out"
+assert_contains "defaults:model"   "gemma4:e2b"        "$help_out"
 assert_contains "defaults:listen"  "127.0.0.1:11434"   "$help_out"
 
 # ---------------------------------------------------------------------------

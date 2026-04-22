@@ -12,10 +12,10 @@ const MODELS = [
     desc: "超轻量 (~292 MB), 只适合试水 / 最低配" },
   { id: "gemma3:1b",   name: "Gemma 3 1B",   sizeGB: 0.9,
     desc: "实用级最小 (815 MB), 手机 / 老笔记本" },
-  { id: "gemma3:4b",   name: "Gemma 3 4B",   sizeGB: 3.3, recommended: true,
+  { id: "gemma3:4b",   name: "Gemma 3 4B",   sizeGB: 3.3,
     desc: "平衡之选 (3.3 GB), 大多数设备" },
-  { id: "gemma4:e2b",  name: "Gemma 4 E2B",  sizeGB: 7.2,
-    desc: "最新架构, 多模态 (7.2 GB)" },
+  { id: "gemma4:e2b",  name: "Gemma 4 E2B",  sizeGB: 7.2, recommended: true,
+    desc: "最新架构, 多模态 (7.2 GB), 生产推荐" },
 ];
 let selectedModel = MODELS.find(m => m.recommended) || MODELS[0];
 

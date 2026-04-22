@@ -365,6 +365,8 @@ jobs:
           if-no-files-found: ignore
 
       # ---------- install.sh Docker smoke: run the shell script end-to-end --
+      # Uses the tiny gemma3:270m (~292 MB) so we can exercise the real
+      # `ollama pull` path in CI without pulling the production-default 7.2 GB.
       - name: Smoke-test linux/install.sh under docker (ubuntu:24.04)
         if: matrix.os == 'ubuntu-22.04'
         shell: bash
@@ -376,20 +378,27 @@ jobs:
             apt-get update -qq >/dev/null
             apt-get install -qq -y curl ca-certificates sudo python3 procps >/dev/null
 
-            echo "=== run install.sh --yes --skip-pull --no-openclaw ==="
-            sh /src/linux/install.sh --yes --skip-pull --no-openclaw
+            echo "=== run install.sh --yes --model gemma3:270m --no-openclaw (real pull) ==="
+            sh /src/linux/install.sh --yes --model gemma3:270m --no-openclaw
 
             echo "=== verify API liveness ==="
             curl -fsS --max-time 5 http://127.0.0.1:11434/api/version
             echo
-            curl -fsS --max-time 5 http://127.0.0.1:11434/v1/models | python3 -m json.tool
+            echo "=== verify the tiny model is actually pulled ==="
+            curl -fsS --max-time 5 http://127.0.0.1:11434/v1/models | python3 -c "import json,sys; d=json.load(sys.stdin); ids=[m[\"id\"] for m in d.get(\"data\",[])]; assert \"gemma3:270m\" in ids, ids; print(\"pulled ok:\", ids)"
 
-            echo "=== verify OpenClaw injection (create fake config) ==="
+            echo "=== verify /v1/chat/completions actually generates text ==="
+            R=$(curl -fsS --max-time 120 http://127.0.0.1:11434/v1/chat/completions \
+              -H "Content-Type: application/json" \
+              -d "{\"model\":\"gemma3:270m\",\"messages\":[{\"role\":\"user\",\"content\":\"say hi in 3 words\"}],\"stream\":false}")
+            echo "$R" | python3 -c "import json,sys; r=json.load(sys.stdin); c=r[\"choices\"][0][\"message\"][\"content\"]; assert len(c.strip())>0, r; print(\"chat OK:\", c.strip()[:80])"
+
+            echo "=== verify OpenClaw injection preserves siblings & upserts ==="
             mkdir -p /root/.openclaw
-            echo "{\"theme\":\"dark\",\"customProviders\":[]}" > /root/.openclaw/config.json
+            echo "{\"theme\":\"dark\",\"customProviders\":[{\"name\":\"local-gemma4\",\"baseURL\":\"http://stale\",\"apiKey\":\"OLD\"}]}" > /root/.openclaw/config.json
             export HOME=/root
-            sh /src/linux/install.sh --yes --skip-pull
-            python3 -c "import json; c=json.load(open(\"/root/.openclaw/config.json\")); ps=c[\"customProviders\"]; assert len(ps)==1, ps; assert ps[0][\"name\"]==\"local-gemma4\", ps; assert c[\"theme\"]==\"dark\"; print(\"upsert OK, providers=\", ps)"
+            sh /src/linux/install.sh --yes --model gemma3:270m
+            python3 -c "import json; c=json.load(open(\"/root/.openclaw/config.json\")); ps=c[\"customProviders\"]; assert len(ps)==1, ps; assert ps[0][\"name\"]==\"local-gemma4\", ps; assert ps[0][\"apiKey\"]==\"ollama\", ps; assert c[\"theme\"]==\"dark\"; print(\"upsert OK, providers=\", ps)"
 
             echo "=== all docker smoke assertions passed ==="
           '
