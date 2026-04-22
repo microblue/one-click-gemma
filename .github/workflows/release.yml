@@ -129,26 +129,48 @@ jobs:
           $exe = Get-ChildItem 'app/src-tauri/target/release/bundle/nsis/*.exe' |
                    Select-Object -First 1
           if (-not $exe) { throw 'no NSIS installer found after build' }
-          Write-Host "[1/5] installing $($exe.Name) silently..."
+          Write-Host "[1/5] installing $($exe.Name) silently (exit & log)..."
           $p = Start-Process -FilePath $exe.FullName `
                              -ArgumentList '/S' -Wait -PassThru
-          if ($p.ExitCode -ne 0) {
-            throw "NSIS /S failed, exit=$($p.ExitCode)"
-          }
+          Write-Host "NSIS exit code: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "NSIS /S failed, exit=$($p.ExitCode)" }
 
           Write-Host '[2/5] locating installed executable...'
+          # Tauri 2 NSIS currentUser => %LOCALAPPDATA%\Programs\<ProductName>\
+          # perMachine              => %ProgramFiles%\<ProductName>\
           $candidates = @(
-            "${env:ProgramFiles}\GemmaInstaller\gemma-installer.exe",
             "${env:LOCALAPPDATA}\Programs\GemmaInstaller\gemma-installer.exe",
+            "${env:ProgramFiles}\GemmaInstaller\gemma-installer.exe",
             "${env:ProgramFiles(x86)}\GemmaInstaller\gemma-installer.exe"
           )
           $installed = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
           if (-not $installed) {
-            Write-Host 'not at expected paths, scanning...'
-            $hit = Get-ChildItem -Path "${env:ProgramFiles}","${env:LOCALAPPDATA}\Programs" `
-                                 -Recurse -Filter 'gemma-installer.exe' `
-                                 -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($hit) { $installed = $hit.FullName } else { throw 'installed exe not found' }
+            Write-Host 'not at expected paths. Diagnostics follow.'
+            Write-Host '--- HKCU Uninstall entries ---'
+            Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                             'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                             'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' `
+                             -ErrorAction SilentlyContinue |
+              Where-Object { $_.DisplayName -like '*Gemma*' -or $_.Publisher -like '*gemma*' } |
+              Select-Object DisplayName, InstallLocation, UninstallString
+            Write-Host '--- recent gemma-installer.exe files (depth 4) ---'
+            $roots = @(
+              $env:LOCALAPPDATA,
+              "${env:LOCALAPPDATA}\Programs",
+              $env:ProgramFiles,
+              ${env:ProgramFiles(x86)},
+              'C:\Users'
+            ) | Where-Object { $_ -and (Test-Path $_) }
+            foreach ($r in $roots) {
+              Write-Host "scanning $r (depth 4)..."
+              Get-ChildItem -Path $r -Recurse -Depth 4 -Filter 'gemma-installer.exe' `
+                            -ErrorAction SilentlyContinue |
+                Select-Object -First 3 | ForEach-Object {
+                  Write-Host "  hit: $($_.FullName)"
+                  if (-not $installed) { $installed = $_.FullName }
+                }
+            }
+            if (-not $installed) { throw 'installed exe not found anywhere' }
           }
           Write-Host "found: $installed"
 
