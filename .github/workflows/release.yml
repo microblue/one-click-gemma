@@ -13,16 +13,10 @@ jobs:
       matrix:
         include:
           - os: macos-14
-            rust-target: universal-apple-darwin
-            bundle: dmg
             artifact-glob: "app/src-tauri/target/*/release/bundle/dmg/*.dmg"
           - os: windows-latest
-            rust-target: x86_64-pc-windows-msvc
-            bundle: nsis
             artifact-glob: "app/src-tauri/target/release/bundle/nsis/*.exe"
           - os: ubuntu-22.04
-            rust-target: x86_64-unknown-linux-gnu
-            bundle: "appimage deb"
             artifact-glob: |
               app/src-tauri/target/release/bundle/appimage/*.AppImage
               app/src-tauri/target/release/bundle/deb/*.deb
@@ -34,8 +28,6 @@ jobs:
       # ---------- Rust toolchain ----------
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust-target }}
 
       - name: Cargo cache
         uses: Swatinem/rust-cache@v2
@@ -60,8 +52,8 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: shellcheck -s sh linux/install.sh
 
-      # ---------- macOS: extra rust target ----------
-      - name: Add Apple Silicon target
+      # ---------- macOS: add both arch targets for universal build ----------
+      - name: Add macOS targets
         if: matrix.os == 'macos-14'
         run: |
           rustup target add aarch64-apple-darwin
