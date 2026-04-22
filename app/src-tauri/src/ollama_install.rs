@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Context, Result};
 use serde::Serialize;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Emitter};
+#[cfg(target_os = "linux")]
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
