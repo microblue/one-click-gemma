@@ -32,12 +32,15 @@
     <section class="screen" data-screen="install" hidden>
       <div class="spinner"></div>
       <h2 id="install-title">正在安装…</h2>
-      <p class="sub" id="install-step">[1/3] 安装 Ollama 运行时</p>
+      <p class="sub" id="install-step">[1/4] 安装 Ollama 运行时</p>
 
       <div class="progress">
         <div class="bar" id="progress-bar"></div>
       </div>
-      <p class="progress-label" id="progress-label">准备中…</p>
+      <div class="progress-meta">
+        <span id="progress-pct">0%</span>
+        <span id="progress-label">准备中…</span>
+      </div>
 
       <pre class="log" id="install-log" hidden></pre>
       <button class="btn-text" id="btn-toggle-log">显示详细日志</button>

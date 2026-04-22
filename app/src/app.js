@@ -1,10 +1,20 @@
 // Gemma 4 installer — minimal SPA wizard
-// Tauri v2 globals are exposed via window.__TAURI__ when invoke is enabled;
-// we also import from the injected ESM shim for convenience.
+// Tauri v2 requires app.withGlobalTauri=true in tauri.conf.json for this to work.
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
 const MODEL = "gemma4:e4b";
+
+// Each install phase owns a contiguous slice of the global 0-100% bar.
+// Weights reflect time cost: Ollama download ~30s, service warm <5s,
+// model pull 9.6GB dominates, OpenClaw write <1s.
+const STEP_RANGES = {
+  install: [0, 25],   // download + install Ollama
+  service: [25, 30],  // wait for /api/version
+  pull:    [30, 97],  // 9.6 GB model — this is the long pole
+  config:  [97, 100], // write OpenClaw config
+};
+let currentRange = STEP_RANGES.install;
 
 const screens = {
   welcome:  document.querySelector('[data-screen="welcome"]'),
@@ -29,10 +39,20 @@ function setCheck(item, ok, value) {
 }
 
 function setProgress(pct, label) {
-  document.getElementById("progress-bar").style.width = `${pct || 0}%`;
+  const clamped = Math.max(0, Math.min(100, Math.round(pct || 0)));
+  document.getElementById("progress-bar").style.width = `${clamped}%`;
+  document.getElementById("progress-pct").textContent = `${clamped}%`;
   if (label != null) {
     document.getElementById("progress-label").textContent = label;
   }
+}
+
+// Map a 0-100 percent within the current step to a 0-100 percent on the
+// global bar. Also nudges the bar forward monotonically.
+function setGlobalFromLocal(localPct, label) {
+  const [lo, hi] = currentRange;
+  const g = lo + (Math.max(0, Math.min(100, localPct)) / 100) * (hi - lo);
+  setProgress(g, label);
 }
 
 function setInstallStep(stepText) {
@@ -85,24 +105,31 @@ async function runInstall() {
   setProgress(0, "准备中…");
 
   try {
-    setInstallStep("[1/3] 安装 Ollama 运行时");
-    setProgress(0, "准备下载 Ollama");
+    currentRange = STEP_RANGES.install;
+    setInstallStep("[1/4] 安装 Ollama 运行时");
+    setGlobalFromLocal(0, "准备下载 Ollama");
     await invoke("install_ollama");
+    setGlobalFromLocal(100, "Ollama 已安装");
 
-    setInstallStep("[2/3] 启动 Ollama 服务");
-    setProgress(0, "等待服务就绪…");
+    currentRange = STEP_RANGES.service;
+    setInstallStep("[2/4] 启动 Ollama 服务");
+    setGlobalFromLocal(0, "等待服务就绪…");
     const ver = await invoke("wait_ollama");
     appendLog(`Ollama ${ver} ready`);
-    setProgress(100, "服务已就绪");
+    setGlobalFromLocal(100, "服务已就绪");
 
-    setInstallStep("[3/3] 下载 Gemma 4 模型 (约 9.6 GB)");
-    setProgress(0, "准备拉取 " + MODEL);
+    currentRange = STEP_RANGES.pull;
+    setInstallStep("[3/4] 下载 Gemma 4 模型 (约 9.6 GB)");
+    setGlobalFromLocal(0, "准备拉取 " + MODEL);
     await invoke("pull_model", { model: MODEL });
+    setGlobalFromLocal(100, "模型已就位");
 
-    setInstallStep("配置 OpenClaw");
-    setProgress(100, "完成");
+    currentRange = STEP_RANGES.config;
+    setInstallStep("[4/4] 接入 OpenClaw");
+    setGlobalFromLocal(0, "写入 provider 配置…");
     const inj = await invoke("inject_openclaw", { model: MODEL });
 
+    setProgress(100, "完成");
     const apiUrl = await invoke("get_api_url");
     document.getElementById("api-url").textContent = apiUrl;
     renderOpenclaw(inj);
@@ -166,7 +193,7 @@ async function sendChat(prompt) {
 // ---------------------------------------------------------------------------
 listen("install:progress", (ev) => {
   const p = ev.payload;
-  if (p.percent != null) setProgress(p.percent, p.message);
+  if (p.percent != null) setGlobalFromLocal(p.percent, p.message);
   if (p.message) appendLog(`[${p.stage}] ${p.message}`);
 });
 
@@ -174,9 +201,10 @@ listen("pull:progress", (ev) => {
   const p = ev.payload;
   const mb = (b) => (b / 1048576).toFixed(0);
   if (p.total > 0) {
-    setProgress(p.percent, `${p.status} · ${mb(p.completed)} / ${mb(p.total)} MB`);
-  } else {
-    setProgress(0, p.status);
+    setGlobalFromLocal(p.percent, `${p.status} · ${mb(p.completed)} / ${mb(p.total)} MB`);
+  } else if (p.status) {
+    // non-download phases (pulling manifest, verifying digest, writing manifest) — tick slowly
+    setGlobalFromLocal(0, p.status);
   }
 });
 

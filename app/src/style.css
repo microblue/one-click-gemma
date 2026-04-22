@@ -12,6 +12,11 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
+
+/* The `hidden` HTML attribute defaults to `display: none`, but our
+   `.screen { display: flex }` would otherwise override it and leave
+   every screen stacked. Force hidden wins. */
+[hidden] { display: none !important; }
 body {
   background: var(--bg);
   color: var(--fg);
@@ -176,9 +181,26 @@ code {
   width: 0;
   transition: width 0.3s ease;
 }
-.progress-label {
-  color: var(--dim);
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
   font-size: 12px;
+  color: var(--dim);
+}
+.progress-meta #progress-pct {
+  color: var(--fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.progress-meta #progress-label {
+  flex: 1;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .log {
