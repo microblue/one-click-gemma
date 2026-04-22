@@ -207,6 +207,73 @@ jobs:
           path: smoke/*.png
           if-no-files-found: ignore
 
+      # ---------- macOS smoke test: mount dmg, install, launch, screenshot ----
+      - name: Smoke-test the macOS DMG
+        if: matrix.os == 'macos-14'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DMG=$(find app/src-tauri/target -name '*.dmg' | head -1)
+          test -n "$DMG" || { echo 'no DMG found after build' >&2; exit 1; }
+          echo "[1/5] mounting $DMG..."
+          mkdir -p /tmp/mnt smoke
+          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint /tmp/mnt
+
+          echo '[2/5] copying .app to /Applications and dropping quarantine...'
+          APP_SRC=$(find /tmp/mnt -maxdepth 2 -name '*.app' -type d | head -1)
+          test -n "$APP_SRC" || { hdiutil detach /tmp/mnt; echo 'no .app in DMG'; exit 1; }
+          cp -R "$APP_SRC" /Applications/
+          hdiutil detach /tmp/mnt
+          APP="/Applications/$(basename "$APP_SRC")"
+          xattr -dr com.apple.quarantine "$APP" || true
+          echo "installed: $APP"
+
+          echo '[3/5] launching...'
+          open "$APP"
+
+          echo '[4/5] waiting up to 20s for the process + a window to appear...'
+          FOUND_PROC=""
+          FOUND_WIN=""
+          for i in $(seq 1 20); do
+            if pgrep -f 'gemma-installer' >/dev/null 2>&1; then
+              FOUND_PROC=yes
+              # try to enumerate visible window titles via System Events.
+              # If accessibility is ungranted, this returns an error — treat as best-effort.
+              WIN=$(osascript -e 'tell application "System Events" to get title of every window of every process whose background only is false' 2>/dev/null || true)
+              if echo "$WIN" | grep -qi 'Gemma'; then
+                FOUND_WIN="$WIN"
+                break
+              fi
+            fi
+            sleep 1
+          done
+          echo "process alive: ${FOUND_PROC:-no}"
+          echo "window hit:    ${FOUND_WIN:-none (accessibility likely denied on CI)}"
+
+          echo '[5/5] screenshotting the main display...'
+          screencapture -x smoke/macos-smoke.png
+          ls -la smoke/
+
+          # cleanup
+          pkill -f gemma-installer || true
+          osascript -e 'tell application "GemmaInstaller" to quit' 2>/dev/null || true
+
+          # Fail the job only if the process never started; a window-title miss
+          # can be a false negative when Accessibility permission isn't granted.
+          if [ -z "$FOUND_PROC" ]; then
+            echo '::error::gemma-installer process never appeared — app crashed or never launched'
+            exit 1
+          fi
+          echo 'SMOKE OK: macOS DMG installed and the app launched without crashing'
+
+      - name: Upload macOS smoke screenshot
+        if: always() && matrix.os == 'macos-14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-smoke-screenshot
+          path: smoke/*.png
+          if-no-files-found: ignore
+
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
