@@ -136,9 +136,10 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "NSIS /S failed, exit=$($p.ExitCode)" }
 
           Write-Host '[2/5] locating installed executable...'
-          # Tauri 2 NSIS currentUser => %LOCALAPPDATA%\Programs\<ProductName>\
+          # Tauri 2 NSIS currentUser => %LOCALAPPDATA%\<ProductName>\
           # perMachine              => %ProgramFiles%\<ProductName>\
           $candidates = @(
+            "${env:LOCALAPPDATA}\GemmaInstaller\gemma-installer.exe",
             "${env:LOCALAPPDATA}\Programs\GemmaInstaller\gemma-installer.exe",
             "${env:ProgramFiles}\GemmaInstaller\gemma-installer.exe",
             "${env:ProgramFiles(x86)}\GemmaInstaller\gemma-installer.exe"
@@ -178,9 +179,9 @@ jobs:
           $proc = Start-Process -FilePath $installed -PassThru
           Start-Sleep -Seconds 3
 
-          Write-Host '[4/5] waiting up to 20s for the Tauri window to appear...'
+          Write-Host '[4/5] waiting up to 30s for the Tauri window to appear...'
           $found = $null
-          for ($i = 0; $i -lt 20; $i++) {
+          for ($i = 0; $i -lt 30; $i++) {
             if ($proc.HasExited) {
               throw "process exited early after ${i}s with exit=$($proc.ExitCode)"
             }
@@ -196,6 +197,12 @@ jobs:
           } else {
             Write-Host "window title: $found"
           }
+
+          # WebView2 renders the title bar immediately but loads + paints the
+          # HTML/CSS/JS a beat later. Give it ~8s so the screenshot captures
+          # real content, not a blank white webview.
+          Write-Host 'waiting 8s for WebView2 to finish painting content...'
+          Start-Sleep -Seconds 8
 
           Write-Host '[5/5] capturing full-screen screenshot...'
           Add-Type -AssemblyName System.Windows.Forms
