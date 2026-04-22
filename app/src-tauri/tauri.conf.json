@@ -49,8 +49,6 @@
     },
     "windows": {
       "nsis": {
-        "installerIcon": "icons/icon.ico",
-        "installMode": "perUser",
         "displayLanguageSelector": false
       }
     },

@@ -66,10 +66,23 @@ cargo tauri build
 │   ├── src-tauri/        Rust 后端
 │   └── src/              前端（纯 HTML/JS/CSS）
 ├── linux/install.sh      Linux 极客通道脚本
+├── tests/                单元与集成测试
 ├── website/              下载站静态页
 ├── openclaw/             OpenClaw provider 模板
 └── .github/workflows/    CI 发布流水线
 ```
+
+### 跑测试
+
+```bash
+# install.sh 的行为测试 (flag 解析, 错误分支, 默认值)
+bash tests/install_sh_test.sh
+
+# OpenClaw provider 注入的 Rust 单元测试
+cd app/src-tauri && cargo test
+```
+
+CI（`.github/workflows/release.yml`）把这两组测试作为前置门禁，通过后才跑 20 分钟的 Tauri 三端构建。
 
 ## 许可证
 

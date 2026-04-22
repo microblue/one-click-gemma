@@ -7,7 +7,50 @@ on:
   workflow_dispatch:
 
 jobs:
+  # -------------------------------------------------------------------------
+  # Fast pre-check: Rust unit tests + install.sh static+behavioural tests.
+  # If this fails we don't waste 20 min on the full Tauri build matrix.
+  # -------------------------------------------------------------------------
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Install Linux deps (webkit etc. are required for the crate graph)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            shellcheck
+
+      - name: shellcheck linux/install.sh
+        run: shellcheck -s sh linux/install.sh
+
+      - name: bash test suite for install.sh
+        run: bash tests/install_sh_test.sh
+
+      - name: cargo test
+        working-directory: app/src-tauri
+        run: cargo test --lib --no-fail-fast
+
+  # -------------------------------------------------------------------------
+  # Cross-platform installer builds.
+  # -------------------------------------------------------------------------
   build:
+    needs: test
     strategy:
       fail-fast: false
       matrix:
@@ -25,7 +68,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ---------- Rust toolchain ----------
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
@@ -34,7 +76,6 @@ jobs:
         with:
           workspaces: app/src-tauri
 
-      # ---------- platform-specific system deps ----------
       - name: Install Linux deps
         if: matrix.os == 'ubuntu-22.04'
         run: |
@@ -45,21 +86,14 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev \
-            shellcheck
+            libjavascriptcoregtk-4.1-dev
 
-      - name: Lint linux/install.sh
-        if: matrix.os == 'ubuntu-22.04'
-        run: shellcheck -s sh linux/install.sh
-
-      # ---------- macOS: add both arch targets for universal build ----------
       - name: Add macOS targets
         if: matrix.os == 'macos-14'
         run: |
           rustup target add aarch64-apple-darwin
           rustup target add x86_64-apple-darwin
 
-      # ---------- build ----------
       - name: Install tauri-cli
         run: cargo install tauri-cli --version "^2" --locked
 
@@ -78,7 +112,6 @@ jobs:
         working-directory: app
         run: cargo tauri build --bundles appimage,deb
 
-      # ---------- upload artifacts ----------
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
