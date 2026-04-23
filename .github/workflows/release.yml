@@ -30,6 +30,8 @@ jobs:
 
       - name: Decide rebuild vs reuse
         id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
           THIS_REF="${GITHUB_REF#refs/tags/}"
@@ -40,12 +42,28 @@ jobs:
           fi
 
           THIS_TAG="$THIS_REF"
-          # first tag before THIS_TAG in reverse-version order
-          PREV_TAG=$(git tag --sort=-v:refname \
-            | awk -v t="$THIS_TAG" 'found==1 {print; exit} $0==t {found=1}')
+          # Look up the most recent tag strictly before THIS_TAG that has a
+          # *published* GitHub Release with downloadable assets. Orphan tags
+          # (tags created but whose release never published — e.g. a CI
+          # failure) are skipped so reuse targets a known-good source.
+          PREV_TAG=""
+          ALL=$(git tag --sort=-v:refname \
+            | awk -v t="$THIS_TAG" 'found==1 {print} $0==t {found=1}')
+          for candidate in $ALL; do
+            # require release exists AND has at least one asset
+            assets=$(gh release view "$candidate" --repo "$GITHUB_REPOSITORY" \
+                       --json assets --jq '.assets | length' 2>/dev/null || echo 0)
+            if [ "${assets:-0}" -gt 0 ]; then
+              PREV_TAG="$candidate"
+              echo "prev release tag: $candidate ($assets assets)"
+              break
+            else
+              echo "skipping $candidate (no published release assets)"
+            fi
+          done
 
           if [ -z "$PREV_TAG" ]; then
-            echo "no previous tag → first release, rebuild"
+            echo "no previous released tag → first real release, rebuild"
             echo "rebuild=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
