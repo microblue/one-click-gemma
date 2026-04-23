@@ -1,0 +1,11 @@
+app/src-tauri/target/
+app/src-tauri/gen/
+website/releases/
+.git/
+node_modules/
+.claude/
+/tmp/
+*.dmg
+*.exe
+*.AppImage
+*.deb

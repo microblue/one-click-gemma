@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cp -f scripts/install.sh scripts/install.ps1 website/",
+  "buildCommand": "rm -f website/install.sh website/install.ps1 && cp scripts/install.sh scripts/install.ps1 website/",
   "outputDirectory": "website",
   "cleanUrls": true,
   "trailingSlash": false,
