@@ -1,91 +1,93 @@
-# Gemma 4 一键安装 · Gemma 4 One-Click Installer
+# Gemma · One-click installer
 
-为 [OpenClaw](https://github.com/openclaw/openclaw) 在本机跑起 Google Gemma 4，暴露 OpenAI 兼容 API。双击安装、零命令行（macOS / Windows），Linux 一行脚本。
+**[English](README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md)**
 
-Get Google Gemma 4 running locally for [OpenClaw](https://github.com/openclaw/openclaw), exposing an OpenAI-compatible API. Double-click to install on macOS / Windows; one-line script on Linux.
+Get Google Gemma running locally for [OpenClaw](https://github.com/openclaw/openclaw), behind an OpenAI-compatible API. Double-click to install on macOS / Windows; one-line script on Linux.
 
 ---
 
-## 下载 · Download
+## Download
 
-| 平台 Platform | 下载 Download | 运行 Run |
-|---|---|---|
-| macOS 14+ | `GemmaInstaller-1.0.0-universal.dmg` 或脚本 | 双击 DMG→拖进 Applications→打开, 或 `curl -fsSL https://<host>/install.sh \| sh` |
-| Windows 10+ | `GemmaInstaller-1.0.0-x64-setup.exe` 或脚本 | 双击 EXE 走向导, 或 PowerShell: `irm https://<host>/install.ps1 \| iex` |
-| Linux | 脚本 | `curl -fsSL https://<host>/install.sh \| sh` |
+| Platform | How to install |
+|---|---|
+| macOS 14+ | Double-click the [DMG](https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller.dmg), drag into Applications, open. Or: `curl -fsSL https://gemma.myclaw.one/install.sh \| sh` |
+| Windows 10+ | Double-click the [EXE](https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller-setup.exe), follow the wizard. Or PowerShell: `irm https://gemma.myclaw.one/install.ps1 \| iex` |
+| Linux | `curl -fsSL https://gemma.myclaw.one/install.sh \| sh` |
 
-Mac/Win 两条通道：原生 GUI 安装包（给非技术用户）+ 一行脚本（给极客）。Linux 只有脚本通道（同 Ollama 做法）。
+macOS and Windows each have two channels: a native GUI installer (for everyone) and a one-line script (for power users). Linux is script-only — same distribution model as Ollama.
 
-三端都会：装 Ollama → 拉默认 `gemma4:e2b`（7.2 GB）→ 自动把 `local-gemma4` provider 写进 OpenClaw → 打开 `http://127.0.0.1:11434/v1` 即用。模型可在安装时选（270m 到 7.2GB）。
+All three paths: install Ollama → pull the default `gemma4:e2b` (7.2 GB) → write a `local-gemma4` provider into your OpenClaw config → expose `http://127.0.0.1:11434/v1`. You can pick a smaller model at install time (from `gemma3:270m` at 292 MB up to `gemma4:e2b`).
 
-## Linux 命令行参数
-
-```bash
-curl -fsSL https://<host>/install.sh | sh -s -- [flags]
-
-  --model <tag>      模型 tag, 默认 gemma4:e4b
-  --listen <addr>    Ollama 绑定地址, 默认 127.0.0.1:11434
-  --no-openclaw      跳过 OpenClaw 配置注入
-  --yes              非交互, 全部同意
-  --help             打印帮助
-```
-
-## 验证安装
+## Verify
 
 ```bash
 curl http://127.0.0.1:11434/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"gemma4:e4b","messages":[{"role":"user","content":"say hi"}]}'
+  -d '{"model":"gemma4:e2b","messages":[{"role":"user","content":"say hi"}]}'
 ```
 
-## 开发者：从源码构建
-
-### 准备
-
-- Rust 1.80+（`rustup default stable`）
-- Node 20+（用于 Tauri 前端资源发布步骤，可选）
-- 对应平台：macOS 需要 Xcode CLT；Windows 需要 MSVC Build Tools；Linux 需要 `libwebkit2gtk-4.1-dev` `libssl-dev` `libayatana-appindicator3-dev` `librsvg2-dev`
-
-### 构建
+## Script flags (advanced / CI)
 
 ```bash
-# 一次构建当前平台的产物
+curl -fsSL https://gemma.myclaw.one/install.sh | sh -s -- [flags]
+
+  --model <tag>      Ollama model tag           (default: gemma4:e2b)
+  --listen <addr>    OLLAMA_HOST                 (default: 127.0.0.1:11434)
+  --no-openclaw      skip OpenClaw injection
+  --skip-pull        skip model download
+  --yes              non-interactive
+  --help             show help
+```
+
+Windows PowerShell: set `$env:GEMMA_MODEL` / `GEMMA_LISTEN` / `GEMMA_NO_OPENCLAW` / `GEMMA_SKIP_PULL` / `GEMMA_YES` before `irm ... | iex`.
+
+## Building from source
+
+### Prerequisites
+
+- Rust 1.80+ (`rustup default stable`)
+- macOS: Xcode Command Line Tools
+- Windows: MSVC Build Tools
+- Linux (for cargo test only — no Linux GUI is built): `libwebkit2gtk-4.1-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev`
+
+### Build
+
+```bash
 cd app
 cargo tauri build
 
-# 产物位置
-# macOS:   target/release/bundle/dmg/GemmaInstaller_1.0.0_universal.dmg
-# Windows: target/release/bundle/nsis/GemmaInstaller_1.0.0_x64-setup.exe
-# (Linux 不构建 GUI; 只走 scripts/install.sh 脚本)
+# outputs
+# macOS:   target/release/bundle/dmg/GemmaInstaller.dmg
+# Windows: target/release/bundle/nsis/GemmaInstaller-setup.exe
+# (no GUI on Linux; use scripts/install.sh)
 ```
 
-### 布局
+### Layout
 
 ```
 .
-├── app/                  Tauri 图形安装器
-│   ├── src-tauri/        Rust 后端
-│   └── src/              前端（纯 HTML/JS/CSS）
-├── scripts/                install.sh (Linux + macOS) + install.ps1 (Windows)
-├── tests/                单元与集成测试
-├── website/              下载站静态页
-├── openclaw/             OpenClaw provider 模板
-└── .github/workflows/    CI 发布流水线
+├── app/                  Tauri GUI installer (macOS + Windows only)
+│   ├── src-tauri/        Rust backend
+│   └── src/              frontend (plain HTML/JS/CSS)
+├── scripts/              install.sh (Linux + macOS) + install.ps1 (Windows)
+├── tests/                unit + integration tests
+├── website/              download site (https://gemma.myclaw.one/)
+├── openclaw/             OpenClaw provider template
+└── .github/workflows/    CI + release pipeline
 ```
 
-### 跑测试
+### Tests
 
 ```bash
-# install.sh 的行为测试 (flag 解析, 错误分支, 默认值)
+# install.sh behaviour (flag parsing, error branches, defaults)
 bash tests/install_sh_test.sh
 
-# OpenClaw provider 注入的 Rust 单元测试
+# Rust unit tests for OpenClaw provider injection
 cd app/src-tauri && cargo test
 ```
 
-CI（`.github/workflows/release.yml`）把这两组测试作为前置门禁，通过后才跑 20 分钟的 Tauri 三端构建。
+CI (`.github/workflows/release.yml`) runs both test suites as a gate, plus a real end-to-end smoke on every platform: Ubuntu Docker pulls the tiny `gemma3:270m`, asserts `/v1/chat/completions` returns non-empty text, and validates the OpenClaw upsert. macOS and Windows runners do the same via `install.sh` / `install.ps1`, in addition to the GUI installer smoke (install silently, launch, screenshot).
 
-## 许可证
+## License
 
-Apache License 2.0. 见 [LICENSE](./LICENSE)。
-本工具所安装的 Ollama、Gemma 4 权重各自沿用其上游许可证。
+Apache License 2.0 — see [LICENSE](./LICENSE). Ollama and the Gemma model weights installed by this tool follow their respective upstream licenses.

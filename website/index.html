@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Gemma 4 一键安装 · for OpenClaw</title>
-  <meta name="description" content="为 OpenClaw 准备一颗本地的 AI 大脑 · 双击即装,零命令行" />
+  <title>Gemma · 一键安装 · for OpenClaw</title>
+  <meta name="description" content="A local AI brain for OpenClaw. One-click Gemma install for macOS / Windows / Linux." />
   <style>
     :root {
       --bg: #0b0c0e;
@@ -16,21 +16,40 @@
       --accent-hover: #ff8458;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
+    html, body { min-height: 100%; }
     body {
       background: var(--bg);
       color: var(--fg);
-      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+            "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       -webkit-font-smoothing: antialiased;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      padding: 48px 24px;
+      padding: 56px 24px;
     }
-    .wrap { width: 100%; max-width: 720px; }
-    header { margin-bottom: 40px; text-align: center; }
+    .wrap { width: 100%; max-width: 560px; text-align: center; position: relative; }
+
+    /* --- language toggle --- */
+    .lang-toggle {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--dim);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font: 12px/1 inherit;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      z-index: 10;
+    }
+    .lang-toggle:hover { color: var(--fg); border-color: var(--fg); }
+
+    /* --- header --- */
     .logo {
       display: inline-block;
       width: 56px; height: 56px;
@@ -48,177 +67,368 @@
       clip-path: polygon(50% 0, 100% 100%, 0 100%);
     }
     h1 {
-      font-size: 32px;
+      font-size: 28px;
       font-weight: 700;
       letter-spacing: -0.02em;
-      margin-bottom: 12px;
+      margin-bottom: 6px;
     }
-    .sub { color: var(--dim); font-size: 17px; }
-    .platforms {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 32px;
-    }
-    @media (max-width: 640px) {
-      .platforms { grid-template-columns: 1fr; }
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      text-align: center;
-      transition: border-color 0.15s, transform 0.15s;
-    }
-    .card.primary {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(255, 107, 61, 0.15);
-    }
-    .card .icon {
-      font-size: 28px;
-      line-height: 1;
-    }
-    .card .name {
-      font-weight: 600;
-      font-size: 15px;
-    }
-    .card .hint {
+    h1 .ver {
+      color: var(--dim);
       font-size: 13px;
-      color: var(--dim);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      margin-left: 8px;
+      vertical-align: middle;
+      letter-spacing: 0;
     }
-    .card a.btn {
-      display: inline-block;
-      padding: 10px 18px;
-      border-radius: 8px;
-      background: var(--fg);
-      color: var(--bg);
-      font-weight: 600;
-      font-size: 14px;
+    h1 .whats-new {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 500;
+      margin-left: 8px;
+      vertical-align: middle;
       text-decoration: none;
-      transition: background 0.15s;
-      width: 100%;
+      letter-spacing: 0;
     }
-    .card.primary a.btn {
+    h1 .whats-new:hover { color: var(--accent-hover); text-decoration: underline; }
+    .brand {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .sub {
+      color: var(--dim);
+      font-size: 15px;
+      margin-bottom: 40px;
+    }
+
+    /* --- tab row --- */
+    .tabs {
+      display: inline-flex;
+      gap: 28px;
+      margin: 0 auto 36px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      background: none;
+      border: none;
+      color: var(--dim);
+      padding: 10px 2px;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.15s;
+    }
+    .tab:hover { color: var(--fg); }
+    .tab.active { color: var(--fg); font-weight: 600; }
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: -1px;
+      height: 2px;
       background: var(--accent);
-      color: #fff;
     }
-    .card.primary a.btn:hover { background: var(--accent-hover); }
-    .card a.btn:hover { background: #d6d7db; }
-    .linux-block {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 24px;
-      margin-bottom: 32px;
+
+    /* --- content --- */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fade 0.2s ease; }
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-    .linux-block .label {
+
+    .cmd {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      color: var(--dim);
-      margin-bottom: 10px;
-    }
-    pre {
+      gap: 10px;
       background: #07080a;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 14px 16px;
-      font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: var(--fg);
-      overflow-x: auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+      text-align: left;
+      user-select: text;
     }
-    pre code { flex: 1; }
-    .copy {
+    .cmd code {
+      flex: 1;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .cmd code::-webkit-scrollbar { display: none; }
+    .cmd button {
       background: transparent;
       border: 1px solid var(--border);
       color: var(--dim);
-      padding: 4px 10px;
+      padding: 5px 10px;
       border-radius: 6px;
       font-size: 12px;
       cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
       flex-shrink: 0;
     }
-    .copy:hover { color: var(--fg); border-color: var(--fg); }
-    .foot {
-      text-align: center;
+    .cmd button:hover { color: var(--fg); border-color: var(--fg); }
+
+    .hint {
       color: var(--dim);
       font-size: 13px;
+      margin-top: 10px;
     }
-    .foot a { color: var(--dim); text-decoration: underline; }
+
+    .or {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--dim);
+      font-size: 13px;
+      margin: 24px 0;
+    }
+    .or::before, .or::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: var(--accent-hover); }
+
+    .req {
+      color: var(--dim);
+      font-size: 12px;
+      margin-top: 14px;
+    }
+
+    .aux {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      margin-top: 18px;
+    }
+    .aux a {
+      color: var(--dim);
+      font-size: 13px;
+      text-decoration: underline;
+      text-decoration-color: var(--border);
+      text-underline-offset: 3px;
+    }
+    .aux a:hover { color: var(--fg); text-decoration-color: var(--fg); }
+
+    .foot {
+      margin-top: 60px;
+      color: var(--dim);
+      font-size: 12px;
+    }
+    .foot a { color: var(--dim); }
     .foot a:hover { color: var(--fg); }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="logo" aria-hidden="true"></div>
-      <h1>Gemma 4 一键安装</h1>
-      <p class="sub">为 OpenClaw 准备一颗本地的 AI 大脑 · 双击即装</p>
-    </header>
+  <button class="lang-toggle" id="lang-toggle" aria-label="Switch language">EN</button>
 
-    <section class="platforms" id="platforms">
-      <div class="card" data-os="mac">
-        <div class="icon"></div>
-        <div class="name">macOS</div>
-        <div class="hint">14 Sonoma+ · DMG 或脚本</div>
-        <a class="btn" id="dl-mac" href="https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller.dmg" download>下载 DMG</a>
+  <div class="wrap">
+    <div class="logo" aria-hidden="true"></div>
+    <h1><span data-i18n="title">Gemma 4 一键安装</span><span class="ver">v1.0.1</span><a class="whats-new" href="/whats-new" data-i18n="whatsNew">· 更新</a></h1>
+    <p class="brand" data-i18n="brand">MYCLAW.ONE 制作</p>
+    <p class="sub" data-i18n="sub">为 OpenClaw 准备一颗本地的 AI 大脑</p>
+
+    <!-- tabs -->
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-os="mac"   aria-controls="panel-mac">macOS</button>
+      <button class="tab" role="tab" data-os="linux" aria-controls="panel-linux">Linux</button>
+      <button class="tab" role="tab" data-os="win"   aria-controls="panel-win">Windows</button>
+    </div>
+
+    <!-- macOS panel -->
+    <section class="panel" id="panel-mac" role="tabpanel" data-os="mac">
+      <div class="cmd">
+        <code id="cmd-mac">curl -fsSL https://gemma.myclaw.one/install.sh | sh</code>
+        <button type="button" data-i18n="copy" onclick="copyText('cmd-mac', this)">复制</button>
       </div>
-      <div class="card" data-os="win">
-        <div class="icon">⊞</div>
-        <div class="name">Windows</div>
-        <div class="hint">10 / 11 · EXE 或脚本</div>
-        <a class="btn" id="dl-win" href="https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller-setup.exe" download>下载 EXE</a>
-      </div>
-      <div class="card" data-os="linux">
-        <div class="icon">🐧</div>
-        <div class="name">Linux</div>
-        <div class="hint">一行脚本</div>
-        <a class="btn" href="#scripts">查看命令</a>
-      </div>
+      <p class="hint" data-i18n="pasteTerminal">粘进终端</p>
+
+      <div class="or" data-i18n="or">或</div>
+
+      <a class="btn" data-i18n="downloadMac"
+         href="https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller.dmg"
+         download>下载 macOS 版</a>
+      <p class="req" data-i18n="requiresMac">Requires macOS 14 Sonoma or later</p>
     </section>
 
-    <section class="linux-block" id="scripts">
-      <div class="label">不想下安装包? 也可以用脚本 (三端通用思路)</div>
-      <pre><code id="cmd-sh">curl -fsSL https://gemma.myclaw.one/install.sh | sh</code><button class="copy" onclick="copyCmd('cmd-sh', this)">复制</button></pre>
-      <div class="label" style="margin-top:10px">Linux / macOS</div>
-      <pre><code id="cmd-ps1">irm https://gemma.myclaw.one/install.ps1 | iex</code><button class="copy" onclick="copyCmd('cmd-ps1', this)">复制</button></pre>
-      <div class="label" style="margin-top:4px">Windows (PowerShell)</div>
+    <!-- Linux panel -->
+    <section class="panel" id="panel-linux" role="tabpanel" data-os="linux">
+      <div class="cmd">
+        <code id="cmd-linux">curl -fsSL https://gemma.myclaw.one/install.sh | sh</code>
+        <button type="button" data-i18n="copy" onclick="copyText('cmd-linux', this)">复制</button>
+      </div>
+      <p class="hint" data-i18n="pasteTerminal">粘进终端</p>
+
+      <div class="aux">
+        <a href="https://github.com/microblue/one-click-gemma/blob/main/scripts/install.sh"
+           target="_blank" rel="noreferrer" data-i18n="viewSource">查看脚本源码</a>
+        <a href="https://github.com/microblue/one-click-gemma#readme"
+           target="_blank" rel="noreferrer" data-i18n="manualInstall">手动安装说明</a>
+      </div>
+      <p class="req" data-i18n="requiresSudo">Requires sudo (systemd or manual ollama serve)</p>
+    </section>
+
+    <!-- Windows panel -->
+    <section class="panel" id="panel-win" role="tabpanel" data-os="win">
+      <div class="cmd">
+        <code id="cmd-win">irm https://gemma.myclaw.one/install.ps1 | iex</code>
+        <button type="button" data-i18n="copy" onclick="copyText('cmd-win', this)">复制</button>
+      </div>
+      <p class="hint" data-i18n="pastePowerShell">粘进 PowerShell</p>
+
+      <div class="or" data-i18n="or">或</div>
+
+      <a class="btn" data-i18n="downloadWin"
+         href="https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller-setup.exe"
+         download>下载 Windows 版</a>
+      <p class="req" data-i18n="requiresWin">Requires Windows 10 or later</p>
     </section>
 
     <p class="foot">
-      Apache 2.0 · <a href="https://github.com/openclaw/openclaw">OpenClaw</a> · <a href="https://ollama.com">Ollama</a> · <a href="https://deepmind.google/models/gemma/gemma-4/">Gemma 4</a>
+      Apache 2.0 ·
+      <a href="https://github.com/microblue/one-click-gemma">GitHub</a> ·
+      <a href="https://github.com/openclaw/openclaw">OpenClaw</a> ·
+      <a href="https://ollama.com">Ollama</a> ·
+      <a href="https://deepmind.google/models/gemma/">Gemma</a>
     </p>
   </div>
 
   <script>
-    (function () {
-      var ua = navigator.userAgent.toLowerCase();
-      var primary = "linux";
-      if (/mac|darwin|iphone|ipad/.test(ua)) primary = "mac";
-      else if (/windows|win64|win32/.test(ua)) primary = "win";
-      else if (/linux|x11|ubuntu|fedora|debian/.test(ua)) primary = "linux";
-      var el = document.querySelector('[data-os="' + primary + '"]');
-      if (el) el.classList.add("primary");
-    })();
+    // ---------------- i18n ----------------
+    var TR = {
+      zh: {
+        title:           "Gemma 4 一键安装",
+        brand:           "MYCLAW.ONE 制作",
+        sub:             "为 OpenClaw 准备一颗本地的 AI 大脑",
+        pasteTerminal:   "粘进终端",
+        pastePowerShell: "粘进 PowerShell",
+        or:              "或",
+        downloadMac:     "下载 macOS 版",
+        downloadWin:     "下载 Windows 版",
+        viewSource:      "查看脚本源码",
+        manualInstall:   "手动安装说明",
+        requiresMac:     "需要 macOS 14 Sonoma 及以上",
+        requiresSudo:    "需要 sudo (systemd 或手动 ollama serve)",
+        requiresWin:     "需要 Windows 10 及以上",
+        copy:            "复制",
+        copied:          "已复制 ✓",
+        whatsNew:        "· 更新"
+      },
+      en: {
+        title:           "One-click Gemma 4",
+        brand:           "MADE BY MYCLAW.ONE",
+        sub:             "A local AI brain for OpenClaw",
+        pasteTerminal:   "paste this in terminal",
+        pastePowerShell: "paste this in PowerShell",
+        or:              "or",
+        downloadMac:     "Download for macOS",
+        downloadWin:     "Download for Windows",
+        viewSource:      "View script source",
+        manualInstall:   "Manual install instructions",
+        requiresMac:     "Requires macOS 14 Sonoma or later",
+        requiresSudo:    "Requires sudo (systemd or manual ollama serve)",
+        requiresWin:     "Requires Windows 10 or later",
+        copy:            "Copy",
+        copied:          "Copied ✓",
+        whatsNew:        "· what's new"
+      }
+    };
 
-    function copyCmd(id, btn) {
+    function detectLang() {
+      try {
+        var saved = localStorage.getItem("lang");
+        if (saved === "zh" || saved === "en") return saved;
+      } catch (_) {}
+      var nav = (navigator.language || navigator.userLanguage || "").toLowerCase();
+      return nav.indexOf("zh") === 0 ? "zh" : "en";
+    }
+
+    var currentLang = detectLang();
+
+    function applyLang(lang) {
+      currentLang = lang;
+      var t = TR[lang];
+      document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+      document.title = (lang === "zh" ? "Gemma · 一键安装" : "Gemma · one-click install") + " · for OpenClaw";
+      document.querySelectorAll("[data-i18n]").forEach(function (el) {
+        var key = el.dataset.i18n;
+        if (t[key] != null) el.textContent = t[key];
+      });
+      document.getElementById("lang-toggle").textContent = lang === "zh" ? "EN" : "中";
+      try { localStorage.setItem("lang", lang); } catch (_) {}
+    }
+
+    // ---------------- tabs ----------------
+    function initTabs() {
+      var tabs = document.querySelectorAll(".tab");
+      var panels = document.querySelectorAll(".panel");
+
+      function activate(os) {
+        tabs.forEach(function (t) {
+          t.classList.toggle("active", t.dataset.os === os);
+          t.setAttribute("aria-selected", t.dataset.os === os ? "true" : "false");
+        });
+        panels.forEach(function (p) {
+          p.classList.toggle("active", p.dataset.os === os);
+        });
+        if (location.hash !== "#" + os) history.replaceState(null, "", "#" + os);
+      }
+
+      var ua = navigator.userAgent.toLowerCase();
+      var initial = "linux";
+      if (/mac|darwin|iphone|ipad/.test(ua)) initial = "mac";
+      else if (/windows|win64|win32/.test(ua)) initial = "win";
+      var hash = (location.hash || "").replace("#", "");
+      if (["mac", "linux", "win"].indexOf(hash) >= 0) initial = hash;
+
+      tabs.forEach(function (t) {
+        t.addEventListener("click", function () { activate(t.dataset.os); });
+      });
+      activate(initial);
+    }
+
+    // ---------------- copy ----------------
+    function copyText(id, btn) {
       var txt = document.getElementById(id).textContent;
       navigator.clipboard.writeText(txt).then(function () {
-        var old = btn.textContent;
-        btn.textContent = "已复制 ✓";
-        setTimeout(function () { btn.textContent = old; }, 1500);
+        var label = TR[currentLang].copy;
+        var done = TR[currentLang].copied;
+        btn.textContent = done;
+        btn.disabled = true;
+        setTimeout(function () {
+          btn.textContent = label;
+          btn.disabled = false;
+        }, 1500);
       });
     }
+
+    // ---------------- boot ----------------
+    document.getElementById("lang-toggle").addEventListener("click", function () {
+      applyLang(currentLang === "zh" ? "en" : "zh");
+    });
+    applyLang(currentLang);
+    initTabs();
   </script>
 </body>
 </html>
