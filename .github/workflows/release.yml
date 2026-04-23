@@ -37,8 +37,8 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             shellcheck
 
-      - name: shellcheck linux/install.sh
-        run: shellcheck -s sh linux/install.sh
+      - name: shellcheck scripts/install.sh
+        run: shellcheck -s sh scripts/install.sh
 
       - name: bash test suite for install.sh
         run: bash tests/install_sh_test.sh
@@ -50,7 +50,7 @@ jobs:
       # ---------- install.sh Docker smoke: end-to-end with real model pull
       # Uses the tiny gemma3:270m (~292 MB) so we can exercise the real
       # `ollama pull` path in CI without pulling the production-default 7.2 GB.
-      - name: Smoke-test linux/install.sh under docker (ubuntu:24.04)
+      - name: Smoke-test scripts/install.sh under docker (ubuntu:24.04)
         shell: bash
         run: |
           set -euo pipefail
@@ -61,7 +61,7 @@ jobs:
             apt-get install -qq -y curl ca-certificates sudo python3 procps >/dev/null
 
             echo "=== run install.sh --yes --model gemma3:270m --no-openclaw (real pull) ==="
-            sh /src/linux/install.sh --yes --model gemma3:270m --no-openclaw
+            sh /src/scripts/install.sh --yes --model gemma3:270m --no-openclaw
 
             echo "=== verify API liveness ==="
             curl -fsS --max-time 5 http://127.0.0.1:11434/api/version
@@ -79,7 +79,7 @@ jobs:
             mkdir -p /root/.openclaw
             echo "{\"theme\":\"dark\",\"customProviders\":[{\"name\":\"local-gemma4\",\"baseURL\":\"http://stale\",\"apiKey\":\"OLD\"}]}" > /root/.openclaw/config.json
             export HOME=/root
-            sh /src/linux/install.sh --yes --model gemma3:270m
+            sh /src/scripts/install.sh --yes --model gemma3:270m
             python3 -c "import json; c=json.load(open(\"/root/.openclaw/config.json\")); ps=c[\"customProviders\"]; assert len(ps)==1, ps; assert ps[0][\"name\"]==\"local-gemma4\", ps; assert ps[0][\"apiKey\"]==\"ollama\", ps; assert c[\"theme\"]==\"dark\"; print(\"upsert OK, providers=\", ps)"
 
             echo "=== all docker smoke assertions passed ==="
@@ -320,6 +320,91 @@ jobs:
           path: smoke/*.png
           if-no-files-found: ignore
 
+      # ---------- macOS script smoke: run scripts/install.sh directly ---------
+      # Brew is pre-installed on macos-14 runners so install_ollama will take
+      # the fast brew path. Uses the tiny gemma3:270m model for a real pull.
+      - name: Smoke-test scripts/install.sh on macOS
+        if: matrix.os == 'macos-14'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== running scripts/install.sh --yes --model gemma3:270m --no-openclaw ==="
+          bash scripts/install.sh --yes --model gemma3:270m --no-openclaw
+
+          echo "=== /api/version ==="
+          curl -fsS --max-time 5 http://127.0.0.1:11434/api/version
+          echo
+
+          echo "=== /v1/models must include gemma3:270m ==="
+          curl -fsS --max-time 5 http://127.0.0.1:11434/v1/models | \
+            python3 -c "import json,sys; d=json.load(sys.stdin); ids=[m['id'] for m in d['data']]; assert 'gemma3:270m' in ids, ids; print('pulled ok:', ids)"
+
+          echo "=== /v1/chat/completions must return non-empty content ==="
+          R=$(curl -fsS --max-time 120 http://127.0.0.1:11434/v1/chat/completions \
+                -H 'Content-Type: application/json' \
+                -d '{"model":"gemma3:270m","messages":[{"role":"user","content":"say hi in 3 words"}],"stream":false}')
+          echo "$R" | python3 -c "import json,sys; r=json.load(sys.stdin); c=r['choices'][0]['message']['content']; assert len(c.strip())>0, r; print('chat OK:', c.strip()[:80])"
+
+          echo "=== OpenClaw upsert (seeded fake config) ==="
+          mkdir -p "$HOME/Library/Application Support/OpenClaw"
+          CFG="$HOME/Library/Application Support/OpenClaw/config.json"
+          printf '%s' '{"theme":"dark","customProviders":[{"name":"local-gemma4","baseURL":"http://stale","apiKey":"OLD"}]}' > "$CFG"
+          bash scripts/install.sh --yes --model gemma3:270m
+          python3 -c "import json,os; c=json.load(open(os.path.expanduser('~/Library/Application Support/OpenClaw/config.json'))); ps=c['customProviders']; assert len(ps)==1, ps; assert ps[0]['name']=='local-gemma4', ps; assert ps[0]['apiKey']=='ollama', ps; assert c['theme']=='dark'; print('upsert OK, providers=', ps)"
+
+          echo "=== all macOS script smoke assertions passed ==="
+
+      # ---------- Windows script smoke: run scripts/install.ps1 directly ------
+      - name: Smoke-test scripts/install.ps1 on Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          Write-Host '=== running scripts/install.ps1 with GEMMA_MODEL=gemma3:270m ==='
+          $env:GEMMA_MODEL       = 'gemma3:270m'
+          $env:GEMMA_NO_OPENCLAW = '1'
+          $env:GEMMA_YES         = '1'
+          & pwsh -NoProfile -File scripts/install.ps1
+          if ($LASTEXITCODE -ne 0) { throw "install.ps1 exit=$LASTEXITCODE" }
+
+          Write-Host '=== /api/version ==='
+          $v = curl.exe -fsS http://127.0.0.1:11434/api/version | ConvertFrom-Json
+          Write-Host "ollama version: $($v.version)"
+
+          Write-Host '=== /v1/models must include gemma3:270m ==='
+          $models = curl.exe -fsS http://127.0.0.1:11434/v1/models | ConvertFrom-Json
+          $ids = @($models.data | ForEach-Object { $_.id })
+          Write-Host "ids: $($ids -join ', ')"
+          if ('gemma3:270m' -notin $ids) { throw "model not pulled; ids=$ids" }
+
+          Write-Host '=== /v1/chat/completions must return non-empty content ==='
+          $body = '{"model":"gemma3:270m","messages":[{"role":"user","content":"say hi in 3 words"}],"stream":false}'
+          $r = curl.exe -fsS --max-time 120 -H 'Content-Type: application/json' `
+                 -d $body http://127.0.0.1:11434/v1/chat/completions | ConvertFrom-Json
+          $c = $r.choices[0].message.content
+          if ([string]::IsNullOrWhiteSpace($c)) { throw 'empty chat reply' }
+          Write-Host "chat OK: $c"
+
+          Write-Host '=== OpenClaw upsert (seeded fake config) ==='
+          $cfgDir = Join-Path $env:APPDATA 'OpenClaw'
+          New-Item -ItemType Directory -Force -Path $cfgDir | Out-Null
+          $cfg = Join-Path $cfgDir 'config.json'
+          '{"theme":"dark","customProviders":[{"name":"local-gemma4","baseURL":"http://stale","apiKey":"OLD"}]}' | Set-Content -Path $cfg -Encoding UTF8
+          Remove-Item Env:GEMMA_NO_OPENCLAW
+          & pwsh -NoProfile -File scripts/install.ps1
+          if ($LASTEXITCODE -ne 0) { throw "install.ps1 exit=$LASTEXITCODE (2nd run)" }
+          $j = Get-Content $cfg -Raw | ConvertFrom-Json
+          $ps = @($j.customProviders)
+          if ($ps.Count -ne 1) { throw "expected 1 provider, got $($ps.Count): $($ps | ConvertTo-Json)" }
+          if ($ps[0].name -ne 'local-gemma4') { throw "wrong name: $($ps[0].name)" }
+          if ($ps[0].apiKey -ne 'ollama') { throw "stale apiKey kept: $($ps[0].apiKey)" }
+          if ($j.theme -ne 'dark') { throw "theme lost: $($j.theme)" }
+          Write-Host 'upsert OK, customProviders:'
+          $ps | ConvertTo-Json -Depth 5 | Write-Host
+
+          Write-Host '=== all Windows script smoke assertions passed ==='
+
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
@@ -340,5 +425,5 @@ jobs:
           files: |
             dist/**/*.dmg
             dist/**/*.exe
-            linux/install.sh
+            scripts/install.sh
           generate_release_notes: true

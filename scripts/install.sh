@@ -1,16 +1,15 @@
 #!/usr/bin/env sh
-# Gemma 4 one-click installer for Linux — installs Ollama + Gemma 4 model
+# Gemma one-click installer for Linux + macOS — installs Ollama + Gemma
 # and wires a local-gemma4 provider into OpenClaw. Safe to re-run.
 #
 # Usage:
 #   curl -fsSL https://<host>/install.sh | sh
-#   curl -fsSL https://<host>/install.sh | sh -s -- --model gemma4:26b --yes
 #
-# Flags:
+# Flags (advanced / CI):
 #   --model <tag>     Ollama model tag to pull            (default: gemma4:e2b)
 #   --listen <addr>   OLLAMA_HOST value                    (default: 127.0.0.1:11434)
 #   --no-openclaw     skip OpenClaw config injection
-#   --skip-pull       skip model download (useful for CI smoke tests)
+#   --skip-pull       skip model download (CI smoke tests)
 #   --yes             non-interactive, auto-confirm all prompts
 #   --help            show this help and exit
 
@@ -24,7 +23,7 @@ LISTEN="127.0.0.1:11434"
 SKIP_OPENCLAW="0"
 SKIP_PULL="0"
 ASSUME_YES="0"
-MIN_DISK_GB=12
+MIN_DISK_GB=10
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -45,6 +44,8 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+OS=$(uname -s)
 
 # ---------------------------------------------------------------------------
 # colored logging
@@ -86,8 +87,8 @@ print_banner() {
     cat <<BANNER
 ${C_BOLD}
   ╔══════════════════════════════════════════════════════╗
-  ║         Gemma 4 · 一键安装 · for OpenClaw           ║
-  ║  Local Gemma 4 behind an OpenAI-compatible API v1   ║
+  ║         Gemma · 一键安装 · for OpenClaw            ║
+  ║  Local Gemma behind an OpenAI-compatible API v1     ║
   ╚══════════════════════════════════════════════════════╝
 ${C_RESET}${C_DIM}  model    : ${C_RESET}$MODEL
 ${C_DIM}  listen   : ${C_RESET}$LISTEN
@@ -101,20 +102,25 @@ BANNER
 preflight() {
     step 1 5 "体检 Preflight"
 
-    OS=$(uname -s)
     case "$OS" in
-        Linux)  ok "OS: Linux $(uname -r)" ;;
-        Darwin) die "这个脚本是给 Linux 的, macOS 请下载 DMG 图形安装器" ;;
-        *)      die "unsupported OS: $OS" ;;
+        Linux)
+            ok "OS: Linux $(uname -r)"
+            ;;
+        Darwin)
+            ok "OS: macOS $(sw_vers -productVersion 2>/dev/null || uname -r)"
+            ;;
+        *)
+            die "unsupported OS: $OS (仅支持 Linux / macOS, Windows 请用 install.ps1)"
+            ;;
     esac
 
     for cmd in curl awk grep sed; do
-        command -v "$cmd" >/dev/null 2>&1 || die "缺少依赖: $cmd (请先 apt/dnf 装它)"
+        command -v "$cmd" >/dev/null 2>&1 || die "缺少依赖: $cmd"
     done
     ok "依赖齐全 (curl, awk, grep, sed)"
 
-    # zstd is required by Ollama's install.sh for binary extraction
-    if ! command -v zstd >/dev/null 2>&1; then
+    # zstd only required by Ollama's Linux install.sh; the macOS .app ships self-contained
+    if [ "$OS" = "Linux" ] && ! command -v zstd >/dev/null 2>&1; then
         info "Ollama 需要 zstd 来解压安装包, 正在自动安装..."
         if command -v apt-get >/dev/null 2>&1; then
             sudo apt-get update -qq >/dev/null && sudo apt-get install -qq -y zstd >/dev/null
@@ -130,32 +136,44 @@ preflight() {
             die "未知包管理器, 请手动安装 zstd 后重跑"
         fi
         command -v zstd >/dev/null 2>&1 || die "zstd 安装失败, 请手动装后重跑"
+        ok "zstd 已就绪"
     fi
-    ok "zstd 已就绪"
 
-    # disk check — use HOME since Ollama stores models under ~/.ollama by default
+    # disk check on $HOME (Ollama stores models under ~/.ollama by default)
     avail_kb=$(df -Pk "$HOME" | awk 'NR==2 {print $4}')
     avail_gb=$((avail_kb / 1024 / 1024))
     if [ "$avail_gb" -lt "$MIN_DISK_GB" ]; then
-        die "磁盘可用 ${avail_gb}GB, 至少需要 ${MIN_DISK_GB}GB (模型 $MODEL 约 9.6GB)"
+        die "磁盘可用 ${avail_gb}GB, 至少需要 ${MIN_DISK_GB}GB"
     fi
     ok "磁盘可用 ${avail_gb} GB"
 
-    # GPU detect (informational only; Ollama itself handles CPU fallback)
-    if command -v nvidia-smi >/dev/null 2>&1; then
-        gpu=$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | head -1 || true)
-        if [ -n "$gpu" ]; then
-            ok "GPU: $gpu"
-        else
-            warn "有 nvidia-smi 但没返回 GPU 信息, 将回退 CPU 推理"
-        fi
-    elif command -v rocm-smi >/dev/null 2>&1; then
-        ok "GPU: AMD ROCm detected"
-    else
-        warn "未检测到 GPU, 将用 CPU 推理 (速度会很慢, 但能跑)"
-    fi
+    # GPU (informational only; Ollama handles CPU fallback)
+    case "$OS" in
+        Linux)
+            if command -v nvidia-smi >/dev/null 2>&1; then
+                gpu=$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | head -1 || true)
+                if [ -n "$gpu" ]; then
+                    ok "GPU: $gpu"
+                else
+                    warn "有 nvidia-smi 但没返回 GPU 信息, 将回退 CPU 推理"
+                fi
+            elif command -v rocm-smi >/dev/null 2>&1; then
+                ok "GPU: AMD ROCm detected"
+            else
+                warn "未检测到 GPU, 将用 CPU 推理 (速度会很慢, 但能跑)"
+            fi
+            ;;
+        Darwin)
+            gpu=$(system_profiler SPDisplaysDataType 2>/dev/null | awk -F': ' '/Chipset Model/{print $2; exit}')
+            if [ -n "$gpu" ]; then
+                ok "GPU: $gpu"
+            else
+                warn "未识别显卡, 将用 CPU 推理"
+            fi
+            ;;
+    esac
 
-    # network check
+    # network
     if ! curl -fsS --max-time 5 --head https://ollama.com >/dev/null 2>&1; then
         die "无法连接 ollama.com, 请检查网络"
     fi
@@ -163,7 +181,7 @@ preflight() {
 }
 
 # ---------------------------------------------------------------------------
-# ollama install
+# install Ollama — Linux: curl|sh, macOS: brew or DMG
 # ---------------------------------------------------------------------------
 install_ollama() {
     step 2 5 "安装 Ollama 运行时"
@@ -174,59 +192,93 @@ install_ollama() {
         return 0
     fi
 
-    info "从 ollama.com 下载官方安装脚本..."
-    if [ "$ASSUME_YES" != "1" ]; then
-        confirm "即将执行 Ollama 官方 install.sh, 会用 sudo 装 systemd 服务, 继续?" || die "用户取消"
-    fi
-    curl -fsSL https://ollama.com/install.sh | sh
+    case "$OS" in
+        Linux)
+            info "从 ollama.com 下载官方安装脚本..."
+            if [ "$ASSUME_YES" != "1" ]; then
+                confirm "即将执行 Ollama 官方 install.sh, 会用 sudo 装 systemd 服务, 继续?" || die "用户取消"
+            fi
+            curl -fsSL https://ollama.com/install.sh | sh
+            ;;
+        Darwin)
+            if command -v brew >/dev/null 2>&1; then
+                info "用 brew install ollama..."
+                if [ "$ASSUME_YES" != "1" ]; then
+                    confirm "即将运行 'brew install ollama', 继续?" || die "用户取消"
+                fi
+                brew install ollama
+            else
+                info "未检测到 brew, 下载 Ollama.dmg..."
+                if [ "$ASSUME_YES" != "1" ]; then
+                    confirm "将从 ollama.com 下载 Ollama.dmg 并拷贝到 /Applications, 继续?" || die "用户取消"
+                fi
+                dmg="$(mktemp -d)/Ollama.dmg"
+                curl -fsSL -o "$dmg" https://ollama.com/download/Ollama.dmg
+                mount=$(hdiutil attach "$dmg" -nobrowse -readonly | awk '{print $NF}' | tail -1)
+                [ -n "$mount" ] || die "hdiutil attach 失败"
+                [ -d /Applications/Ollama.app ] && rm -rf /Applications/Ollama.app
+                cp -R "$mount/Ollama.app" /Applications/
+                hdiutil detach "$mount" >/dev/null
+                rm -f "$dmg"
+            fi
+            ;;
+    esac
     ok "Ollama 已安装"
 }
 
 # ---------------------------------------------------------------------------
-# configure listen address via systemd drop-in (only if systemd is in use)
+# wait until /api/version responds — branches on OS for service startup
 # ---------------------------------------------------------------------------
-configure_listen() {
-    # default 127.0.0.1:11434 matches Ollama's own default — no-op
-    if [ "$LISTEN" = "127.0.0.1:11434" ]; then
-        return 0
-    fi
+wait_service() {
+    step 3 5 "启动 Ollama 服务"
 
-    if ! command -v systemctl >/dev/null 2>&1; then
-        warn "非 systemd 系统, 只能在本次 shell 导出 OLLAMA_HOST=$LISTEN"
-        export OLLAMA_HOST="$LISTEN"
-        return 0
-    fi
-
-    info "配置 OLLAMA_HOST=$LISTEN (systemd drop-in)"
-    sudo mkdir -p /etc/systemd/system/ollama.service.d
-    sudo tee /etc/systemd/system/ollama.service.d/override.conf >/dev/null <<EOF
+    case "$OS" in
+        Linux)
+            # reconfigure listen via systemd drop-in if not default
+            if [ "$LISTEN" != "127.0.0.1:11434" ] && command -v systemctl >/dev/null 2>&1; then
+                info "配置 OLLAMA_HOST=$LISTEN (systemd drop-in)"
+                sudo mkdir -p /etc/systemd/system/ollama.service.d
+                sudo tee /etc/systemd/system/ollama.service.d/override.conf >/dev/null <<EOF
 [Service]
 Environment="OLLAMA_HOST=$LISTEN"
 Environment="OLLAMA_KEEP_ALIVE=24h"
 EOF
-    sudo systemctl daemon-reload
-    sudo systemctl restart ollama
-}
+                sudo systemctl daemon-reload
+                sudo systemctl restart ollama
+            fi
 
-# ---------------------------------------------------------------------------
-# wait until /api/version responds
-# ---------------------------------------------------------------------------
-wait_service() {
-    step 3 5 "启动 Ollama 服务"
-    configure_listen
-
-    # make sure service is running (Ollama's install.sh already enables+starts it,
-    # but belt & suspenders — also covers non-systemd userspace launch)
-    if command -v systemctl >/dev/null 2>&1 && systemctl --no-pager status >/dev/null 2>&1; then
-        sudo systemctl enable --now ollama >/dev/null 2>&1 || true
-    else
-        # non-systemd environment (Docker, WSL, Termux, minimal chroot): start manually
-        if ! pgrep -x ollama >/dev/null 2>&1; then
-            info "无 systemd, 在后台启动 'ollama serve'"
-            OLLAMA_HOST="$LISTEN" nohup ollama serve >/tmp/ollama-installer.log 2>&1 &
-            sleep 1
-        fi
-    fi
+            if command -v systemctl >/dev/null 2>&1 && systemctl --no-pager status >/dev/null 2>&1; then
+                sudo systemctl enable --now ollama >/dev/null 2>&1 || true
+            else
+                if ! pgrep -x ollama >/dev/null 2>&1; then
+                    info "无 systemd, 在后台启动 'ollama serve'"
+                    OLLAMA_HOST="$LISTEN" nohup ollama serve >/tmp/ollama-installer.log 2>&1 &
+                    sleep 1
+                fi
+            fi
+            ;;
+        Darwin)
+            # macOS: brew install doesn't auto-start; the DMG app starts a tray menu.
+            # Either way, making sure `ollama serve` is running is the simplest
+            # cross-path approach. If someone already runs the tray app, that also
+            # binds to :11434 so our probe will find it immediately.
+            if [ "$LISTEN" != "127.0.0.1:11434" ]; then
+                launchctl setenv OLLAMA_HOST "$LISTEN" 2>/dev/null || true
+                export OLLAMA_HOST="$LISTEN"
+            fi
+            if ! pgrep -f 'ollama.*serve' >/dev/null 2>&1 && \
+               ! pgrep -x Ollama >/dev/null 2>&1; then
+                if [ -d /Applications/Ollama.app ]; then
+                    info "启动 Ollama.app..."
+                    open -g /Applications/Ollama.app
+                elif command -v ollama >/dev/null 2>&1; then
+                    info "在后台启动 'ollama serve'..."
+                    OLLAMA_HOST="$LISTEN" nohup ollama serve >/tmp/ollama-installer.log 2>&1 &
+                fi
+                sleep 1
+            fi
+            ;;
+    esac
 
     endpoint="http://$LISTEN"
     i=0
@@ -239,14 +291,14 @@ wait_service() {
         i=$((i + 1))
         sleep 1
     done
-    die "Ollama 服务 30s 内未就绪, 请手动检查: systemctl status ollama 或看 /tmp/ollama-installer.log"
+    die "Ollama 服务 30s 内未就绪, 请手动检查 (Linux: systemctl status ollama; macOS: 查看 Ollama.app)"
 }
 
 # ---------------------------------------------------------------------------
 # pull model
 # ---------------------------------------------------------------------------
 pull_model() {
-    step 4 5 "拉取模型 $MODEL (约 9.6 GB)"
+    step 4 5 "拉取模型 $MODEL"
 
     if [ "$SKIP_PULL" = "1" ]; then
         ok "--skip-pull 已设置, 跳过下载 (用 'ollama pull $MODEL' 手动补上)"
@@ -258,9 +310,9 @@ pull_model() {
         return 0
     fi
 
-    info "开始下载, 进度取决于你的网速, 耐心等一下..."
+    info "开始下载, 进度取决于你的网速..."
     if ! ollama pull "$MODEL"; then
-        warn "首次 pull 失败, 1s 后重试一次"
+        warn "首次 pull 失败, 1s 后重试"
         sleep 1
         ollama pull "$MODEL" || die "pull $MODEL 失败, 请检查磁盘和网络"
     fi
@@ -279,7 +331,7 @@ openclaw_config_json() {
   "models": [
     {
       "id": "__MODEL_ID__",
-      "name": "Gemma 4 (Local)",
+      "name": "Gemma (Local)",
       "contextWindow": 131072,
       "supportsVision": true
     }
@@ -289,10 +341,10 @@ JSON
 }
 
 find_openclaw_config() {
-    # echoes first existing config file path, or empty
     for p in \
         "${OPENCLAW_CONFIG_DIR:-}/config.json" \
         "$HOME/.openclaw/config.json" \
+        "$HOME/Library/Application Support/OpenClaw/config.json" \
         "$HOME/.config/openclaw/config.json"
     do
         [ -n "$p" ] && [ -f "$p" ] && printf '%s' "$p" && return 0
@@ -322,7 +374,6 @@ inject_openclaw() {
     fi
 
     info "发现 OpenClaw 配置: $cfg"
-    # upsert via python3 if available, else jq, else bail to manual
     if command -v python3 >/dev/null 2>&1; then
         PROVIDER="$provider_json" TARGET="$cfg" python3 - <<'PY'
 import json, os, tempfile, sys

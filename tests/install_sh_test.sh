@@ -5,7 +5,7 @@
 
 set -eu
 
-SCRIPT="${SCRIPT:-$(cd "$(dirname "$0")/.." && pwd)/linux/install.sh}"
+SCRIPT="${SCRIPT:-$(cd "$(dirname "$0")/.." && pwd)/scripts/install.sh}"
 [ -x "$SCRIPT" ] || { echo "install.sh not executable at $SCRIPT"; exit 1; }
 
 PASS=0
@@ -48,7 +48,7 @@ NEWLINE='
 out=$("$SCRIPT" --help 2>&1 || true)
 rc=$("$SCRIPT" --help >/dev/null 2>&1; echo $?)
 assert_contains "help:usage-section"   "Usage:"              "$out"
-assert_contains "help:flags-section"   "Flags:"              "$out"
+assert_contains "help:flags-section"   "Flags"               "$out"
 assert_contains "help:--model-line"    "--model <tag>"       "$out"
 assert_contains "help:--listen-line"   "--listen <addr>"     "$out"
 assert_contains "help:--no-openclaw"   "--no-openclaw"       "$out"
@@ -64,7 +64,7 @@ assert_eq_int   "help:exit-code"       "0"                   "$rc"
 
 # -h alias
 out_h=$("$SCRIPT" -h 2>&1 || true)
-assert_contains "help:-h-alias-works"  "Flags:"              "$out_h"
+assert_contains "help:-h-alias-works"  "Flags"               "$out_h"
 
 # ---------------------------------------------------------------------------
 # case 2: unknown flag exits 2 and writes to stderr

@@ -170,26 +170,29 @@
       <div class="card" data-os="mac">
         <div class="icon"></div>
         <div class="name">macOS</div>
-        <div class="hint">14 Sonoma+</div>
+        <div class="hint">14 Sonoma+ · DMG 或脚本</div>
         <a class="btn" id="dl-mac" href="releases/GemmaInstaller-1.0.0-universal.dmg" download>下载 DMG</a>
       </div>
       <div class="card" data-os="win">
         <div class="icon">⊞</div>
         <div class="name">Windows</div>
-        <div class="hint">10 / 11 x64</div>
+        <div class="hint">10 / 11 · EXE 或脚本</div>
         <a class="btn" id="dl-win" href="releases/GemmaInstaller-1.0.0-x64-setup.exe" download>下载 EXE</a>
       </div>
       <div class="card" data-os="linux">
         <div class="icon">🐧</div>
         <div class="name">Linux</div>
         <div class="hint">一行脚本</div>
-        <a class="btn" href="#linux">查看命令</a>
+        <a class="btn" href="#scripts">查看命令</a>
       </div>
     </section>
 
-    <section class="linux-block" id="linux">
-      <div class="label">Linux · 在终端运行 (无图形安装器)</div>
-      <pre><code id="cmd">curl -fsSL https://gemma-installer.example/install.sh | sh</code><button class="copy" onclick="copyCmd()">复制</button></pre>
+    <section class="linux-block" id="scripts">
+      <div class="label">不想下安装包? 也可以用脚本 (三端通用思路)</div>
+      <pre><code id="cmd-sh">curl -fsSL https://gemma-installer.example/install.sh | sh</code><button class="copy" onclick="copyCmd('cmd-sh', this)">复制</button></pre>
+      <div class="label" style="margin-top:10px">Linux / macOS</div>
+      <pre><code id="cmd-ps1">irm https://gemma-installer.example/install.ps1 | iex</code><button class="copy" onclick="copyCmd('cmd-ps1', this)">复制</button></pre>
+      <div class="label" style="margin-top:4px">Windows (PowerShell)</div>
     </section>
 
     <p class="foot">
@@ -208,10 +211,9 @@
       if (el) el.classList.add("primary");
     })();
 
-    function copyCmd() {
-      var txt = document.getElementById("cmd").textContent;
+    function copyCmd(id, btn) {
+      var txt = document.getElementById(id).textContent;
       navigator.clipboard.writeText(txt).then(function () {
-        var btn = document.querySelector(".copy");
         var old = btn.textContent;
         btn.textContent = "已复制 ✓";
         setTimeout(function () { btn.textContent = old; }, 1500);
