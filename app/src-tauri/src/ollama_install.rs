@@ -145,8 +145,54 @@ async fn install_windows(app: AppHandle) -> Result<()> {
         .args(["/VERYSILENT", "/NORESTART", "/SUPPRESSMSGBOXES"])
         .status()
         .await?;
-    if !status.success() {
-        return Err(anyhow!("OllamaSetup.exe 退出码 {:?}", status.code()));
+
+    // Windows exit 5 = ERROR_ACCESS_DENIED; 740 = ERROR_ELEVATION_REQUIRED.
+    // Older Windows builds and stricter UAC/group-policy setups (e.g. the
+    // report from a Surface running Win 10 with 3 GB RAM) refuse the
+    // installer's per-user mode without elevation. Retry once through
+    // PowerShell with `-Verb RunAs`, which shows a UAC prompt and lets the
+    // installer rerun in the elevated context.
+    let code = status.code();
+    if !status.success() && matches!(code, Some(5) | Some(740)) {
+        emit(
+            &app,
+            "ollama",
+            format!("非提权安装被拒 (exit {code:?}), 通过 UAC 重试"),
+            Some(85),
+        );
+        let tmp_str = tmp.display().to_string().replace('\'', "''");
+        // Mirrors upstream Ollama install.ps1: Start-Process -PassThru and
+        // $p.WaitForExit(timeout) so we wait on the installer PID only
+        // (not its tray-app grandchild). Timeout 5 min, UAC decline → 1223.
+        let ps = format!(
+            "try {{ $p = Start-Process -FilePath '{tmp_str}' \
+                 -ArgumentList '/VERYSILENT','/NORESTART','/SUPPRESSMSGBOXES' \
+                 -Verb RunAs -PassThru -ErrorAction Stop }} \
+             catch {{ exit 1223 }} \
+             if (-not $p.WaitForExit(300000)) {{ try {{ $p.Kill() }} catch {{}} ; exit 124 }} \
+             exit $p.ExitCode"
+        );
+        let retry = Command::new("powershell")
+            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &ps])
+            .status()
+            .await?;
+        if !retry.success() {
+            let _ = tokio::fs::remove_file(&tmp).await;
+            let c = retry.code();
+            let reason = match c {
+                Some(1223) => "用户取消了 UAC 授权".to_string(),
+                Some(124)  => "提权后安装 5 分钟内未完成".to_string(),
+                Some(n)    => format!("提权后 OllamaSetup.exe 退出码 {n}"),
+                None       => "提权后 OllamaSetup.exe 异常终止".to_string(),
+            };
+            return Err(anyhow!(
+                "{reason} · 首次非提权尝试返回 {code:?} · \
+                 可以右键这个 app → 以管理员身份运行, 再点一次开始安装"
+            ));
+        }
+    } else if !status.success() {
+        let _ = tokio::fs::remove_file(&tmp).await;
+        return Err(anyhow!("OllamaSetup.exe 退出码 {code:?}"));
     }
 
     let _ = tokio::fs::remove_file(&tmp).await;

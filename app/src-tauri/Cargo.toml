@@ -1,6 +1,6 @@
 [package]
 name = "gemma-installer"
-version = "1.0.4"
+version = "1.1.0"
 edition = "2021"
 description = "One-click installer for Google Gemma 4, exposing an OpenAI-compatible local API for OpenClaw"
 license = "Apache-2.0"
