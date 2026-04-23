@@ -419,11 +419,28 @@ jobs:
         with:
           path: dist
 
+      # Stage assets with stable, unversioned filenames so
+      # github.com/<repo>/releases/latest/download/<name> permalinks
+      # never change across version bumps. (Keep the versioned ones too
+      # for users who want reproducible pinning.)
+      - name: Stage release assets
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          DMG=$(find dist -name '*.dmg' | head -1)
+          EXE=$(find dist -name '*.exe' | head -1)
+          test -n "$DMG" || { echo 'no DMG found' >&2; exit 1; }
+          test -n "$EXE" || { echo 'no EXE found' >&2; exit 1; }
+          cp "$DMG" release-assets/GemmaInstaller.dmg
+          cp "$EXE" release-assets/GemmaInstaller-setup.exe
+          cp "$DMG" "release-assets/$(basename "$DMG")"
+          cp "$EXE" "release-assets/$(basename "$EXE")"
+          cp scripts/install.sh  release-assets/install.sh
+          cp scripts/install.ps1 release-assets/install.ps1
+          ls -la release-assets
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/**/*.dmg
-            dist/**/*.exe
-            scripts/install.sh
+          files: release-assets/*
           generate_release_notes: true
