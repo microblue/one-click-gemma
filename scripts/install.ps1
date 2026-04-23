@@ -104,10 +104,23 @@ if ($ollamaCmd) {
         Die "下载 OllamaSetup.exe 失败: $_"
     }
 
+    # Create the "upgraded" marker file so Ollama's tray app starts hidden
+    # during silent install (upstream Ollama install.ps1 does this).
+    $markerDir = Join-Path $env:LOCALAPPDATA 'Ollama'
+    if (-not (Test-Path $markerDir)) { New-Item -ItemType Directory -Path $markerDir -Force | Out-Null }
+    New-Item -ItemType File -Path (Join-Path $markerDir 'upgraded') -Force | Out-Null
+
     Info '静默运行 OllamaSetup.exe /VERYSILENT /NORESTART...'
+    # IMPORTANT: no -Wait. -Wait blocks on the Ollama tray app that the
+    # installer spawns, and the tray app never exits. We only care about
+    # the installer (Inno Setup) process exiting.
     $p = Start-Process -FilePath $setup `
                        -ArgumentList '/VERYSILENT','/NORESTART','/SUPPRESSMSGBOXES' `
-                       -Wait -PassThru
+                       -PassThru
+    if (-not $p.WaitForExit(300000)) {
+        try { $p.Kill() } catch { }
+        Die 'OllamaSetup.exe did not exit within 5 min — aborting'
+    }
     if ($p.ExitCode -ne 0) { Die "OllamaSetup.exe 退出码 $($p.ExitCode)" }
     Remove-Item $setup -ErrorAction SilentlyContinue
 
