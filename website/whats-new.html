@@ -4,212 +4,396 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>What's new · Gemma · for OpenClaw</title>
-  <meta name="description" content="Recent changes and releases of the Gemma one-click installer for OpenClaw." />
+  <meta name="description" content="Live commit-by-commit changelog for the Gemma one-click installer." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap" />
+
   <style>
     :root {
-      --bg: #0b0c0e;
-      --fg: #f5f6f8;
-      --dim: #8b8f96;
-      --card: #15171b;
-      --border: #22252b;
-      --accent: #ff6b3d;
-      --accent-hover: #ff8458;
+      --bg:          #0b0c0e;
+      --bg-raise:    #101114;
+      --fg:          #f5f6f8;
+      --dim:         #8b8f96;
+      --faint:       #4f5259;
+      --card:        #15171b;
+      --border:      #22252b;
+      --hairline:    #1a1c21;
+      --accent:      #ff6b3d;
+      --accent-hover:#ff8458;
+      --accent-deep: #d14a20;
+
+      --ff-display: "Fraunces", ui-serif, Georgia, serif;
+      --ff-body:    "Manrope", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --ff-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { min-height: 100%; }
     body {
-      background: var(--bg);
+      background:
+        radial-gradient(ellipse 60% 40% at 85% -10%, rgba(255,107,61,0.06), transparent 60%),
+        var(--bg);
       color: var(--fg);
-      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-            "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-family: var(--ff-body);
+      font-size: 16px;
+      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
-    .lang-toggle {
-      position: fixed;
-      top: 18px; right: 18px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--dim);
-      padding: 6px 12px;
-      border-radius: 6px;
-      font: 12px/1 inherit;
-      cursor: pointer;
-      z-index: 10;
-    }
-    .lang-toggle:hover { color: var(--fg); border-color: var(--fg); }
 
-    .wrap {
-      max-width: 680px;
+    /* --- top nav --- */
+    .topbar {
+      max-width: 860px;
       margin: 0 auto;
-      padding: 56px 24px;
+      padding: 28px 32px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
     }
     .back {
+      font-family: var(--ff-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--dim);
+      text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      color: var(--dim);
-      font-size: 14px;
-      text-decoration: none;
-      margin-bottom: 24px;
+      gap: 8px;
+      transition: color 0.15s;
     }
     .back:hover { color: var(--fg); }
+    .back .arrow { transition: transform 0.2s; }
+    .back:hover .arrow { transform: translateX(-3px); }
+    .lang-toggle {
+      background: rgba(21, 23, 27, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      color: var(--dim);
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .lang-toggle:hover {
+      color: var(--fg);
+      border-color: var(--fg);
+      background: rgba(245, 246, 248, 0.06);
+    }
+
+    /* --- header --- */
+    .wrap { max-width: 720px; margin: 0 auto; padding: 72px 32px 80px; }
     h1 {
-      font-size: 32px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
+      font-family: var(--ff-display);
+      font-style: italic;
+      font-variation-settings: "opsz" 144, "SOFT" 50;
+      font-size: clamp(48px, 7vw, 76px);
+      font-weight: 500;
+      line-height: 1.0;
+      letter-spacing: -0.035em;
+      color: var(--fg);
+      margin-bottom: 20px;
     }
     .lead {
+      font-family: var(--ff-body);
       color: var(--dim);
-      margin-bottom: 40px;
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.55;
+      margin-bottom: 72px;
+      max-width: 560px;
     }
-    .lead a { color: var(--accent); text-decoration: none; }
-    .lead a:hover { color: var(--accent-hover); }
-
-    .state {
-      color: var(--dim);
-      padding: 40px 0;
-      text-align: center;
-    }
-
-    .release {
-      border-top: 1px solid var(--border);
-      padding: 28px 0;
-    }
-    .release:first-of-type { border-top: none; padding-top: 8px; }
-    .rel-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    .rel-tag {
-      background: var(--accent);
-      color: #fff;
-      padding: 3px 10px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 14px;
-      font-variant-numeric: tabular-nums;
-    }
-    .rel-title {
-      font-weight: 600;
-      font-size: 17px;
-    }
-    .rel-date {
-      color: var(--dim);
-      font-size: 13px;
-      font-variant-numeric: tabular-nums;
-      margin-left: auto;
-    }
-    .rel-body {
-      color: var(--fg);
-      font-size: 14px;
-      line-height: 1.7;
-    }
-    .rel-body h2, .rel-body h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--dim);
-      margin: 18px 0 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .rel-body ul { list-style: none; padding: 0; }
-    .rel-body li {
-      padding: 3px 0;
-      padding-left: 18px;
-      position: relative;
-    }
-    .rel-body li::before {
-      content: "▸";
-      position: absolute;
-      left: 0;
-      color: var(--accent);
-    }
-    .rel-body code {
-      background: var(--card);
-      border: 1px solid var(--border);
-      padding: 1px 6px;
-      border-radius: 4px;
-      font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-    .rel-body a {
+    .lead a {
       color: var(--accent);
       text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
     }
-    .rel-body a:hover { text-decoration: underline; }
-    .rel-body strong { color: var(--fg); font-weight: 600; }
-    .rel-link {
+    .lead a:hover { color: var(--accent-hover); border-bottom-color: var(--accent-hover); }
+
+    .state {
+      text-align: center;
+      color: var(--dim);
+      padding: 80px 0;
+      font-size: 15px;
+    }
+    .state .spin {
       display: inline-block;
-      margin-top: 12px;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: -2px;
+      margin-right: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- release card --- */
+    .release {
+      position: relative;
+      padding: 0 0 56px 0;
+      margin-bottom: 20px;
+    }
+    .release:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: 28px;
+      height: 1px;
+      background: var(--hairline);
+    }
+    .rel-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .rel-tag {
+      font-family: var(--ff-mono);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--fg);
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .rel-tag::before {
+      content: "";
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(255,107,61,0.15);
+    }
+    .rel-date {
+      font-family: var(--ff-mono);
       color: var(--dim);
       font-size: 13px;
-      text-decoration: underline;
-      text-decoration-color: var(--border);
-      text-underline-offset: 3px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
     }
-    .rel-link:hover { color: var(--fg); text-decoration-color: var(--fg); }
-
-    .foot {
-      margin-top: 60px;
+    .rel-title {
+      font-family: var(--ff-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 20px;
       color: var(--dim);
-      font-size: 12px;
-      text-align: center;
+      letter-spacing: -0.01em;
+      margin-bottom: 22px;
+      display: block;
     }
-    .foot a { color: var(--dim); }
-    .foot a:hover { color: var(--fg); }
+
+    /* --- commit list --- */
+    .commits {
+      list-style: none;
+      border-left: 1px solid var(--hairline);
+      padding: 4px 0 4px 0;
+      margin-left: 4px;
+    }
+    .commits li {
+      position: relative;
+      padding: 10px 0 10px 28px;
+      display: flex;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 14.5px;
+      line-height: 1.55;
+    }
+    .commits li::before {
+      content: "";
+      position: absolute;
+      left: -4px; top: 19px;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--faint);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .commits li:hover::before {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .sha {
+      font-family: var(--ff-mono);
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--faint);
+      background: var(--bg-raise);
+      border: 1px solid var(--hairline);
+      padding: 2px 8px;
+      border-radius: 5px;
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+      text-decoration: none;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    a.sha:hover { color: var(--dim); border-color: var(--border); }
+    .prefix {
+      font-family: var(--ff-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+      text-transform: lowercase;
+      flex-shrink: 0;
+    }
+    .prefix.p-feat   { color: #ffd1c0; background: rgba(255,107,61,0.14); }
+    .prefix.p-fix    { color: #f5e08c; background: rgba(245,224,140,0.10); }
+    .prefix.p-ci     { color: #a8b6c4; background: rgba(168,182,196,0.10); }
+    .prefix.p-tests  { color: #c8bff5; background: rgba(200,191,245,0.10); }
+    .prefix.p-install{ color: #ffd1c0; background: rgba(255,107,61,0.14); }
+    .prefix.p-release{ color: #ffd1c0; background: rgba(255,107,61,0.14); }
+    .prefix.p-docs   { color: #a8c4b6; background: rgba(168,196,182,0.10); }
+    .prefix.p-other  { color: var(--dim); background: rgba(139,143,150,0.08); }
+    .subject {
+      flex: 1;
+      min-width: 200px;
+      color: var(--fg);
+      font-weight: 500;
+    }
+    .author {
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      color: var(--faint);
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+    }
+
+    .rel-footer {
+      margin-top: 28px;
+      padding-left: 32px;
+      display: flex;
+      gap: 22px;
+      flex-wrap: wrap;
+    }
+    .rel-footer a {
+      font-family: var(--ff-body);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--dim);
+      text-decoration: none;
+      position: relative;
+      padding-bottom: 1px;
+      transition: color 0.15s;
+    }
+    .rel-footer a::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: -1px;
+      height: 1px;
+      background: var(--hairline);
+      transition: background 0.15s;
+    }
+    .rel-footer a:hover { color: var(--fg); }
+    .rel-footer a:hover::after { background: var(--fg); }
+
+    .more-note {
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      color: var(--faint);
+      margin-top: 12px;
+      padding-left: 32px;
+      letter-spacing: 0.02em;
+    }
+
+    /* --- footer --- */
+    .wrap-foot {
+      max-width: 720px;
+      margin: 56px auto 0;
+      padding: 36px 32px 48px;
+      border-top: 1px solid var(--hairline);
+      text-align: center;
+      color: var(--faint);
+      font-size: 13px;
+    }
+    .wrap-foot a {
+      color: var(--dim);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .wrap-foot a:hover { color: var(--fg); }
   </style>
 </head>
 <body>
-  <button class="lang-toggle" id="lang-toggle" aria-label="Switch language">EN</button>
+  <nav class="topbar">
+    <a class="back" href="/">
+      <span class="arrow">←</span>
+      <span data-i18n="back">回首页</span>
+    </a>
+    <button class="lang-toggle" id="lang-toggle" aria-label="Switch language">EN</button>
+  </nav>
 
-  <div class="wrap">
-    <a class="back" href="/"><span data-i18n="back">← 回首页</span></a>
-
+  <main class="wrap">
     <h1 data-i18n="title">更新日志</h1>
-    <p class="lead" data-i18n="lead">
-      每个版本自动从 GitHub Releases 抓取 · <a href="https://github.com/microblue/one-click-gemma/releases" target="_blank" rel="noreferrer" data-i18n="viewOnGithub">在 GitHub 查看</a>
+    <p class="lead" id="lead">
+      <span data-i18n="leadPrefix">每一次构建都从真实 commit 抓取 · </span>
+      <a href="https://github.com/microblue/one-click-gemma/releases" target="_blank" rel="noreferrer" data-i18n="viewOnGithub">在 GitHub 上看完整历史</a>
     </p>
 
     <div id="releases">
-      <div class="state" data-i18n="loading">加载中…</div>
+      <div class="state"><span class="spin"></span><span data-i18n="loading">加载中…</span></div>
     </div>
+  </main>
 
-    <p class="foot">
-      <a href="/" data-i18n="footerHome">← Gemma · 一键安装</a>
-    </p>
-  </div>
+  <footer class="wrap-foot">
+    <a href="/" data-i18n="footerHome">← Gemma · 一键安装</a>
+  </footer>
 
   <script>
+    // ---------------- constants ----------------
+    var REPO = "microblue/one-click-gemma";
+    var API  = "https://api.github.com/repos/" + REPO;
+    var EMPTY_TREE_SHA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"; // git's empty tree
+    var CACHE_KEY = "gemma-whats-new-cache-v2";
+    var CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
     // ---------------- i18n ----------------
     var TR = {
       zh: {
-        pageTitle:    "更新日志 · Gemma · for OpenClaw",
-        back:         "← 回首页",
-        title:        "更新日志",
-        lead:         null,  // lead contains HTML, handled in applyLang
-        leadPrefix:   "每个版本自动从 GitHub Releases 抓取 · ",
-        viewOnGithub: "在 GitHub 查看",
-        loading:      "加载中…",
-        noReleases:   "还没有正式版本发布",
-        apiFailed:    "无法从 GitHub 加载更新记录，请直接看",
-        footerHome:   "← Gemma · 一键安装",
-        dateLocale:   "zh-CN"
+        pageTitle:     "更新日志 · Gemma · for OpenClaw",
+        back:          "回首页",
+        title:         "更新日志",
+        leadPrefix:    "每一次构建都从真实 commit 抓取 · ",
+        viewOnGithub:  "在 GitHub 上看完整历史",
+        loading:       "加载中…",
+        apiFailed:     "无法从 GitHub 加载，",
+        tryGithub:     "去 GitHub 看",
+        emptyCommits:  "这个版本没有可显示的 commit",
+        compareLink:   "完整 diff 在 GitHub",
+        initialRelease:"首次发布 · 前 50 个 commit",
+        moreCommits:   "还有 __N__ 个 commit —— ",
+        footerHome:    "← Gemma · 一键安装",
+        dateLocale:    "zh-CN"
       },
       en: {
-        pageTitle:    "What's new · Gemma · for OpenClaw",
-        back:         "← Back to home",
-        title:        "What's new",
-        lead:         null,
-        leadPrefix:   "Pulled live from GitHub Releases · ",
-        viewOnGithub: "View on GitHub",
-        loading:      "Loading…",
-        noReleases:   "No releases published yet",
-        apiFailed:    "Couldn't load release notes from GitHub, try",
-        footerHome:   "← Gemma · one-click install",
-        dateLocale:   "en-US"
+        pageTitle:     "What's new · Gemma · for OpenClaw",
+        back:          "Back home",
+        title:         "What's new",
+        leadPrefix:    "Every build, pulled from real commits · ",
+        viewOnGithub:  "full history on GitHub",
+        loading:       "Loading…",
+        apiFailed:     "Couldn't load from GitHub, ",
+        tryGithub:     "read on GitHub",
+        emptyCommits:  "no commits to show for this release",
+        compareLink:   "full diff on GitHub",
+        initialRelease:"first release · showing first 50 commits",
+        moreCommits:   "plus __N__ more commit(s) — ",
+        footerHome:    "← Gemma · one-click install",
+        dateLocale:    "en-US"
       }
     };
 
@@ -232,113 +416,195 @@
         var k = el.dataset.i18n;
         if (t[k] != null) el.textContent = t[k];
       });
-      // lead has a nested <a>; rebuild
-      var lead = document.querySelector(".lead");
-      lead.innerHTML = t.leadPrefix +
-        '<a href="https://github.com/microblue/one-click-gemma/releases" target="_blank" rel="noreferrer">' +
-        t.viewOnGithub + '</a>';
       document.getElementById("lang-toggle").textContent = lang === "zh" ? "EN" : "中";
-      // re-render dates if we've already loaded releases
-      if (window.__releases) renderReleases(window.__releases);
+      if (window.__data) renderTimeline(window.__data);
       try { localStorage.setItem("lang", lang); } catch (_) {}
     }
 
-    // ---------------- markdown-ish to HTML ----------------
+    // ---------------- helpers ----------------
     function esc(s) {
-      return String(s).replace(/[&<>"']/g, function (c) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
         return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
       });
     }
-
-    function mdToHtml(md) {
-      if (!md) return "";
-      var lines = md.replace(/\r\n/g, "\n").split("\n");
-      var out = "";
-      var inList = false;
-      lines.forEach(function (raw) {
-        var line = raw;
-        // auto-link bare URLs
-        var linked = esc(line).replace(/(https?:\/\/[^\s<]+)/g, function (u) {
-          return '<a href="' + u + '" target="_blank" rel="noreferrer">' + u + '</a>';
-        });
-        // inline code: `x`
-        linked = linked.replace(/`([^`]+)`/g, "<code>$1</code>");
-        // bold: **x**
-        linked = linked.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-
-        if (/^## /.test(line)) {
-          if (inList) { out += "</ul>"; inList = false; }
-          out += "<h3>" + esc(line.replace(/^## /, "")) + "</h3>";
-        } else if (/^### /.test(line)) {
-          if (inList) { out += "</ul>"; inList = false; }
-          out += "<h3>" + esc(line.replace(/^### /, "")) + "</h3>";
-        } else if (/^\s*[-*] /.test(line)) {
-          if (!inList) { out += "<ul>"; inList = true; }
-          out += "<li>" + linked.replace(/^\s*[-*] /, "") + "</li>";
-        } else if (line.trim() === "") {
-          if (inList) { out += "</ul>"; inList = false; }
-        } else {
-          if (inList) { out += "</ul>"; inList = false; }
-          out += "<p>" + linked + "</p>";
-        }
-      });
-      if (inList) out += "</ul>";
-      return out;
-    }
-
-    // ---------------- fetch + render ----------------
     function fmtDate(iso) {
       try {
         var d = new Date(iso);
-        return d.toLocaleDateString(TR[currentLang].dateLocale,
-          { year: "numeric", month: "short", day: "numeric" });
+        return d.toLocaleDateString(TR[currentLang].dateLocale, {
+          year: "numeric", month: "short", day: "numeric"
+        });
       } catch (_) {
-        return iso.slice(0, 10);
+        return String(iso).slice(0, 10);
       }
     }
+    function parseSubject(full) {
+      var first = String(full || "").split("\n")[0];
+      var m = first.match(/^([a-z][a-z0-9_.+-]*)\s*:\s*(.+)$/i);
+      if (m) {
+        var prefix = m[1].toLowerCase();
+        return { prefix: prefix, subject: m[2] };
+      }
+      return { prefix: null, subject: first };
+    }
+    function prefixClass(prefix) {
+      if (!prefix) return "p-other";
+      if (/^(feat|feature)$/.test(prefix)) return "p-feat";
+      if (/^fix$/.test(prefix)) return "p-fix";
+      if (/^ci$/.test(prefix)) return "p-ci";
+      if (/^tests?$/.test(prefix)) return "p-tests";
+      if (/^(install|install\.sh|install\.ps1|scripts)$/.test(prefix)) return "p-install";
+      if (/^(release|vercel|v\d)$/.test(prefix)) return "p-release";
+      if (/^(docs?|readme|website)$/.test(prefix)) return "p-docs";
+      return "p-other";
+    }
 
-    function renderReleases(releases) {
-      window.__releases = releases;
+    // ---------------- fetch ----------------
+    function cached(key) {
+      try {
+        var raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        var obj = JSON.parse(raw);
+        if (Date.now() - obj.t > CACHE_TTL_MS) return null;
+        return obj.v;
+      } catch (_) { return null; }
+    }
+    function putCache(key, v) {
+      try { sessionStorage.setItem(key, JSON.stringify({ t: Date.now(), v: v })); } catch (_) {}
+    }
+
+    async function fetchJson(url) {
+      var r = await fetch(url, { headers: { Accept: "application/vnd.github+json" } });
+      if (!r.ok) throw new Error("HTTP " + r.status + " on " + url);
+      return r.json();
+    }
+
+    async function loadAll() {
+      var c = cached(CACHE_KEY);
+      if (c) return c;
+
+      var releases = await fetchJson(API + "/releases?per_page=30");
+      // For each release, fetch the commits between the previous tag and this tag
+      var enriched = [];
+      for (var i = 0; i < releases.length; i++) {
+        var r = releases[i];
+        var prev = releases[i + 1]; // older
+        var commits = [];
+        var isFirst = !prev;
+        try {
+          if (!isFirst) {
+            var cmp = await fetchJson(API + "/compare/" + prev.tag_name + "..." + r.tag_name);
+            commits = cmp.commits || [];
+          } else {
+            // first release: just show the last 50 commits reaching this tag
+            var list = await fetchJson(API + "/commits?sha=" + encodeURIComponent(r.tag_name) + "&per_page=50");
+            commits = list.map(function (c) {
+              return { sha: c.sha, commit: c.commit, author: c.author, html_url: c.html_url };
+            });
+          }
+        } catch (e) {
+          commits = [];
+        }
+        enriched.push({
+          tag_name:     r.tag_name,
+          name:         r.name,
+          published_at: r.published_at,
+          html_url:     r.html_url,
+          body:         r.body,
+          isFirst:      isFirst,
+          prev_tag:     prev ? prev.tag_name : null,
+          commits:      commits
+        });
+      }
+      putCache(CACHE_KEY, enriched);
+      return enriched;
+    }
+
+    // ---------------- render ----------------
+    function commitLi(c) {
+      var sha    = (c.sha || "").slice(0, 7);
+      var url    = c.html_url || ("https://github.com/" + REPO + "/commit/" + c.sha);
+      var parsed = parseSubject((c.commit && c.commit.message) || "");
+      var author = (c.author && c.author.login)
+                     ? c.author.login
+                     : (c.commit && c.commit.author && c.commit.author.name) || "";
+
+      var pfx = parsed.prefix
+        ? '<span class="prefix ' + prefixClass(parsed.prefix) + '">' + esc(parsed.prefix) + '</span>'
+        : "";
+      var auth = author
+        ? '<span class="author">@' + esc(author) + '</span>'
+        : "";
+
+      return '' +
+        '<li>' +
+          '<a class="sha" href="' + esc(url) + '" target="_blank" rel="noreferrer">' + esc(sha) + '</a>' +
+          pfx +
+          '<span class="subject">' + esc(parsed.subject) + '</span>' +
+          auth +
+        '</li>';
+    }
+
+    function renderTimeline(data) {
+      window.__data = data;
       var root = document.getElementById("releases");
-      if (!releases || !releases.length) {
-        root.innerHTML = '<div class="state">' + TR[currentLang].noReleases + '</div>';
+      var t = TR[currentLang];
+
+      if (!data || !data.length) {
+        root.innerHTML = '<div class="state">' + esc(t.emptyCommits) + '</div>';
         return;
       }
-      root.innerHTML = releases.map(function (r) {
+
+      root.innerHTML = data.map(function (r) {
+        var commits = r.commits || [];
+        var shown   = commits.slice(0, 40);
+        var hidden  = Math.max(0, commits.length - shown.length);
+
+        var subtitle = r.name && r.name !== r.tag_name
+          ? '<span class="rel-title">' + esc(r.name) + '</span>'
+          : "";
+
+        var commitsHtml = shown.length
+          ? '<ul class="commits">' + shown.map(commitLi).join("") + '</ul>'
+          : '<div class="state" style="padding:24px 0">' + esc(t.emptyCommits) + '</div>';
+
+        var moreHtml = hidden > 0
+          ? '<div class="more-note">' + esc(t.moreCommits.replace("__N__", hidden)) +
+            '<a href="' + esc(r.html_url) + '" target="_blank" rel="noreferrer" style="color:var(--dim)">' + esc(t.compareLink) + '</a>.</div>'
+          : "";
+
+        var compareUrl = r.prev_tag
+          ? 'https://github.com/' + REPO + '/compare/' + r.prev_tag + '...' + r.tag_name
+          : r.html_url;
+
+        var footLinks = [
+          '<a href="' + esc(compareUrl) + '" target="_blank" rel="noreferrer">' + esc(t.compareLink) + ' →</a>',
+          '<a href="' + esc(r.html_url) + '" target="_blank" rel="noreferrer">' + esc(t.viewOnGithub) + ' →</a>'
+        ].join("");
+
+        var firstNote = r.isFirst
+          ? '<span class="rel-title">' + esc(t.initialRelease) + '</span>'
+          : subtitle;
+
         return '' +
-          '<section class="release">' +
+          '<article class="release">' +
             '<div class="rel-head">' +
               '<span class="rel-tag">' + esc(r.tag_name) + '</span>' +
-              (r.name && r.name !== r.tag_name ? '<span class="rel-title">' + esc(r.name) + '</span>' : '') +
-              '<span class="rel-date">' + fmtDate(r.published_at) + '</span>' +
+              '<span class="rel-date">' + esc(fmtDate(r.published_at)) + '</span>' +
             '</div>' +
-            '<div class="rel-body">' + mdToHtml(r.body || '') + '</div>' +
-            '<a class="rel-link" href="' + esc(r.html_url) + '" target="_blank" rel="noreferrer">' +
-              (currentLang === 'zh' ? 'GitHub 上查看 →' : 'View on GitHub →') +
-            '</a>' +
-          '</section>';
-      }).join('');
+            firstNote +
+            commitsHtml +
+            moreHtml +
+            '<div class="rel-footer">' + footLinks + '</div>' +
+          '</article>';
+      }).join("");
     }
 
-    function loadReleases() {
-      var root = document.getElementById("releases");
-      fetch("https://api.github.com/repos/microblue/one-click-gemma/releases", {
-        headers: { Accept: "application/vnd.github+json" }
-      })
-        .then(function (r) {
-          if (!r.ok) throw new Error("HTTP " + r.status);
-          return r.json();
-        })
-        .then(function (data) {
-          renderReleases(data);
-        })
-        .catch(function (e) {
-          root.innerHTML =
-            '<div class="state">' + TR[currentLang].apiFailed + ' ' +
-            '<a href="https://github.com/microblue/one-click-gemma/releases" target="_blank" rel="noreferrer">' +
-              (currentLang === 'zh' ? 'GitHub Releases' : 'GitHub Releases') +
-            '</a></div>';
-        });
+    function renderError() {
+      var t = TR[currentLang];
+      document.getElementById("releases").innerHTML =
+        '<div class="state">' + esc(t.apiFailed) +
+        '<a href="https://github.com/microblue/one-click-gemma/releases" target="_blank" rel="noreferrer" style="color:var(--accent)">' +
+        esc(t.tryGithub) + '</a></div>';
     }
 
     // ---------------- boot ----------------
@@ -346,7 +612,11 @@
       applyLang(currentLang === "zh" ? "en" : "zh");
     });
     applyLang(currentLang);
-    loadReleases();
+
+    loadAll().then(renderTimeline).catch(function (e) {
+      console.error(e);
+      renderError();
+    });
   </script>
 </body>
 </html>

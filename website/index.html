@@ -5,124 +5,210 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Gemma · 一键安装 · for OpenClaw</title>
   <meta name="description" content="A local AI brain for OpenClaw. One-click Gemma install for macOS / Windows / Linux." />
+
+  <!-- Preconnect to font origins before anything else -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Fraunces (display, variable) + Manrope (body) + JetBrains Mono (tech) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" />
+
   <style>
     :root {
-      --bg: #0b0c0e;
-      --fg: #f5f6f8;
-      --dim: #8b8f96;
-      --card: #15171b;
-      --border: #22252b;
-      --accent: #ff6b3d;
-      --accent-hover: #ff8458;
+      --bg:          #0b0c0e;
+      --bg-raise:    #101114;
+      --fg:          #f5f6f8;
+      --dim:         #8b8f96;
+      --faint:       #4f5259;
+      --card:        #15171b;
+      --border:      #22252b;
+      --hairline:    #1a1c21;
+      --accent:      #ff6b3d;
+      --accent-hover:#ff8458;
+      --accent-deep: #d14a20;
+
+      --ff-display: "Fraunces", ui-serif, Georgia, serif;
+      --ff-body:    "Manrope", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --ff-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { min-height: 100%; }
+    html { scroll-behavior: smooth; }
     body {
       background: var(--bg);
       color: var(--fg);
-      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-            "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-family: var(--ff-body);
+      font-size: 16px;
+      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      padding: 56px 24px;
+      padding: 80px 28px 64px;
+      /* subtle atmospheric glow */
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,107,61,0.07), transparent 60%),
+        var(--bg);
     }
-    .wrap { width: 100%; max-width: 560px; text-align: center; position: relative; }
 
-    /* --- language toggle --- */
+    .wrap { width: 100%; max-width: 640px; text-align: center; position: relative; }
+
+    /* --- fixed language toggle --- */
     .lang-toggle {
       position: fixed;
-      top: 18px;
-      right: 18px;
-      background: var(--card);
+      top: 22px; right: 22px;
+      background: rgba(21, 23, 27, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--border);
       color: var(--dim);
-      padding: 6px 12px;
-      border-radius: 6px;
-      font: 12px/1 inherit;
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
       cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-      z-index: 10;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+      z-index: 20;
     }
-    .lang-toggle:hover { color: var(--fg); border-color: var(--fg); }
+    .lang-toggle:hover {
+      color: var(--fg);
+      border-color: var(--fg);
+      background: rgba(245, 246, 248, 0.06);
+    }
 
-    /* --- header --- */
+    /* --- reveal orchestration --- */
+    .rise { opacity: 0; transform: translateY(12px); animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+    .rise.d1 { animation-delay: 0.05s; }
+    .rise.d2 { animation-delay: 0.12s; }
+    .rise.d3 { animation-delay: 0.20s; }
+    .rise.d4 { animation-delay: 0.28s; }
+    .rise.d5 { animation-delay: 0.36s; }
+    .rise.d6 { animation-delay: 0.44s; }
+    .rise.d7 { animation-delay: 0.54s; }
+    @keyframes rise {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .rise { animation: none; opacity: 1; transform: none; }
+    }
+
+    /* --- logo --- */
     .logo {
       display: inline-block;
-      width: 56px; height: 56px;
+      width: 72px; height: 72px;
       background: var(--accent);
-      border-radius: 14px;
-      margin-bottom: 20px;
+      border-radius: 18px;
+      margin-bottom: 28px;
       position: relative;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04),
+        0 20px 60px -20px rgba(255, 107, 61, 0.4);
     }
     .logo::after {
       content: "";
       position: absolute;
-      inset: 16px;
+      inset: 20px;
       border-radius: 6px;
       background: var(--bg);
       clip-path: polygon(50% 0, 100% 100%, 0 100%);
     }
+
+    /* --- hero --- */
     h1 {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
-    h1 .ver {
-      color: var(--dim);
-      font-size: 13px;
+      font-family: var(--ff-display);
+      font-variation-settings: "opsz" 96, "SOFT" 30;
+      font-size: clamp(40px, 6.4vw, 60px);
       font-weight: 500;
-      font-variant-numeric: tabular-nums;
-      margin-left: 8px;
-      vertical-align: middle;
-      letter-spacing: 0;
-    }
-    h1 .whats-new {
-      color: var(--accent);
-      font-size: 13px;
-      font-weight: 500;
-      margin-left: 8px;
-      vertical-align: middle;
-      text-decoration: none;
-      letter-spacing: 0;
-    }
-    h1 .whats-new:hover { color: var(--accent-hover); text-decoration: underline; }
-    .brand {
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 14px;
-    }
-    .sub {
-      color: var(--dim);
-      font-size: 15px;
-      margin-bottom: 40px;
+      line-height: 1.04;
+      letter-spacing: -0.025em;
+      color: var(--fg);
+      margin: 0 0 18px;
     }
 
-    /* --- tab row --- */
+    .meta-line {
+      font-family: var(--ff-mono);
+      font-size: 13.5px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      margin: 0 0 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .meta-line .v {
+      color: var(--dim);
+      font-variant-numeric: tabular-nums;
+    }
+    .meta-line .sep {
+      color: var(--faint);
+      user-select: none;
+    }
+    .meta-line .news {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color 0.15s, transform 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .meta-line .news:hover {
+      color: var(--accent-hover);
+    }
+    .meta-line .news:hover .arrow { transform: translateX(3px); }
+    .meta-line .arrow {
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+
+    .brand {
+      font-family: var(--ff-mono);
+      color: var(--accent);
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin: 0 0 20px;
+    }
+    .sub {
+      font-family: var(--ff-body);
+      color: var(--dim);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.5;
+      max-width: 460px;
+      margin: 0 auto 64px;
+    }
+
+    /* --- tabs --- */
     .tabs {
       display: inline-flex;
-      gap: 28px;
-      margin: 0 auto 36px;
+      gap: 36px;
+      margin: 0 auto 44px;
       border-bottom: 1px solid var(--border);
+      position: relative;
     }
     .tab {
       background: none;
       border: none;
       color: var(--dim);
-      padding: 10px 2px;
-      font: inherit;
-      font-size: 15px;
+      padding: 14px 4px;
+      font-family: var(--ff-body);
+      font-size: 17px;
       font-weight: 500;
       cursor: pointer;
       position: relative;
-      transition: color 0.15s;
+      transition: color 0.2s;
+      letter-spacing: 0.01em;
     }
     .tab:hover { color: var(--fg); }
     .tab.active { color: var(--fg); font-weight: 600; }
@@ -132,184 +218,254 @@
       left: 0; right: 0; bottom: -1px;
       height: 2px;
       background: var(--accent);
+      border-radius: 1px;
     }
 
-    /* --- content --- */
+    /* --- panel content --- */
     .panel { display: none; }
-    .panel.active { display: block; animation: fade 0.2s ease; }
-    @keyframes fade {
-      from { opacity: 0; transform: translateY(4px); }
+    .panel.active { display: block; animation: panelIn 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
     .cmd {
       display: flex;
       align-items: center;
-      gap: 10px;
-      background: #07080a;
+      gap: 12px;
+      background: var(--bg-raise);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
-      font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-family: var(--ff-mono);
+      font-size: 14.5px;
+      line-height: 1.4;
       color: var(--fg);
       text-align: left;
       user-select: text;
+      transition: border-color 0.2s;
     }
+    .cmd:hover { border-color: #2c2f37; }
     .cmd code {
       flex: 1;
       overflow-x: auto;
       white-space: nowrap;
       scrollbar-width: none;
       -ms-overflow-style: none;
+      font-family: inherit;
     }
     .cmd code::-webkit-scrollbar { display: none; }
     .cmd button {
       background: transparent;
       border: 1px solid var(--border);
       color: var(--dim);
-      padding: 5px 10px;
-      border-radius: 6px;
-      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-family: var(--ff-body);
+      font-size: 12.5px;
+      font-weight: 500;
       cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
       flex-shrink: 0;
+      letter-spacing: 0.01em;
     }
-    .cmd button:hover { color: var(--fg); border-color: var(--fg); }
+    .cmd button:hover {
+      color: var(--fg);
+      border-color: var(--fg);
+      background: rgba(245, 246, 248, 0.04);
+    }
+    .cmd button:disabled {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(255, 107, 61, 0.08);
+    }
 
     .hint {
       color: var(--dim);
-      font-size: 13px;
-      margin-top: 10px;
+      font-size: 14.5px;
+      margin-top: 14px;
+      font-weight: 400;
     }
 
     .or {
       display: flex;
       align-items: center;
-      gap: 14px;
-      color: var(--dim);
+      gap: 20px;
+      color: var(--faint);
+      font-family: var(--ff-body);
       font-size: 13px;
-      margin: 24px 0;
+      font-weight: 500;
+      text-transform: lowercase;
+      letter-spacing: 0.18em;
+      margin: 34px 0;
     }
     .or::before, .or::after {
       content: "";
       flex: 1;
       height: 1px;
-      background: var(--border);
+      background: var(--hairline);
     }
 
     .btn {
       display: inline-block;
       background: var(--accent);
       color: #fff;
-      padding: 12px 28px;
-      border-radius: 10px;
+      padding: 16px 36px;
+      border-radius: 12px;
+      font-family: var(--ff-body);
       font-weight: 600;
-      font-size: 15px;
+      font-size: 16.5px;
       text-decoration: none;
-      transition: background 0.15s;
+      letter-spacing: 0.005em;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.2s;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.15) inset,
+        0 12px 28px -12px rgba(255, 107, 61, 0.55);
     }
-    .btn:hover { background: var(--accent-hover); }
+    .btn:hover {
+      background: var(--accent-hover);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.18) inset,
+        0 14px 34px -12px rgba(255, 107, 61, 0.7);
+    }
+    .btn:active { transform: translateY(1px); }
 
     .req {
       color: var(--dim);
-      font-size: 12px;
-      margin-top: 14px;
+      font-size: 13px;
+      margin-top: 18px;
+      font-weight: 400;
     }
 
     .aux {
       display: flex;
-      gap: 18px;
+      gap: 28px;
       justify-content: center;
-      margin-top: 18px;
+      margin-top: 24px;
+      flex-wrap: wrap;
     }
     .aux a {
       color: var(--dim);
-      font-size: 13px;
-      text-decoration: underline;
-      text-decoration-color: var(--border);
-      text-underline-offset: 3px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      position: relative;
+      padding-bottom: 2px;
+      transition: color 0.15s;
     }
-    .aux a:hover { color: var(--fg); text-decoration-color: var(--fg); }
+    .aux a::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 1px;
+      background: var(--border);
+      transition: background 0.15s;
+    }
+    .aux a:hover { color: var(--fg); }
+    .aux a:hover::after { background: var(--fg); }
 
+    /* --- footer --- */
     .foot {
-      margin-top: 60px;
-      color: var(--dim);
-      font-size: 12px;
+      margin-top: 96px;
+      padding-top: 36px;
+      border-top: 1px solid var(--hairline);
+      color: var(--faint);
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.01em;
     }
-    .foot a { color: var(--dim); }
+    .foot a {
+      color: var(--dim);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
     .foot a:hover { color: var(--fg); }
+    .foot .dot { color: var(--faint); margin: 0 6px; }
   </style>
 </head>
 <body>
   <button class="lang-toggle" id="lang-toggle" aria-label="Switch language">EN</button>
 
   <div class="wrap">
-    <div class="logo" aria-hidden="true"></div>
-    <h1><span data-i18n="title">Gemma 4 一键安装</span><span class="ver">v1.0.1</span><a class="whats-new" href="/whats-new" data-i18n="whatsNew">· 更新</a></h1>
-    <p class="brand" data-i18n="brand">MYCLAW.ONE 制作</p>
-    <p class="sub" data-i18n="sub">为 OpenClaw 准备一颗本地的 AI 大脑</p>
+    <div class="logo rise d1" aria-hidden="true"></div>
 
-    <!-- tabs -->
-    <div class="tabs" role="tablist">
+    <h1 class="rise d2" data-i18n="title">Gemma 4 一键安装</h1>
+
+    <p class="meta-line rise d3">
+      <span class="v">v1.0.2</span>
+      <span class="sep">·</span>
+      <a class="news" href="/whats-new" data-i18n="whatsNew">
+        <span>更新日志</span>
+        <span class="arrow">→</span>
+      </a>
+    </p>
+
+    <p class="brand rise d4" data-i18n="brand">MYCLAW.ONE 制作</p>
+    <p class="sub rise d5" data-i18n="sub">为 OpenClaw 准备一颗本地的 AI 大脑</p>
+
+    <div class="tabs rise d6" role="tablist">
       <button class="tab" role="tab" data-os="mac"   aria-controls="panel-mac">macOS</button>
       <button class="tab" role="tab" data-os="linux" aria-controls="panel-linux">Linux</button>
       <button class="tab" role="tab" data-os="win"   aria-controls="panel-win">Windows</button>
     </div>
 
-    <!-- macOS panel -->
-    <section class="panel" id="panel-mac" role="tabpanel" data-os="mac">
-      <div class="cmd">
-        <code id="cmd-mac">curl -fsSL https://gemma.myclaw.one/install.sh | sh</code>
-        <button type="button" data-i18n="copy" onclick="copyText('cmd-mac', this)">复制</button>
-      </div>
-      <p class="hint" data-i18n="pasteTerminal">粘进终端</p>
+    <div class="rise d7">
 
-      <div class="or" data-i18n="or">或</div>
+      <!-- macOS panel -->
+      <section class="panel" id="panel-mac" role="tabpanel" data-os="mac">
+        <div class="cmd">
+          <code id="cmd-mac">curl -fsSL https://gemma.myclaw.one/install.sh | sh</code>
+          <button type="button" data-i18n="copy" onclick="copyText('cmd-mac', this)">复制</button>
+        </div>
+        <p class="hint" data-i18n="pasteTerminal">粘进终端</p>
+        <div class="or" data-i18n="or">或</div>
+        <a class="btn" data-i18n="downloadMac"
+           href="https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller.dmg"
+           download>下载 macOS 版</a>
+        <p class="req" data-i18n="requiresMac">Requires macOS 14 Sonoma or later</p>
+      </section>
 
-      <a class="btn" data-i18n="downloadMac"
-         href="https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller.dmg"
-         download>下载 macOS 版</a>
-      <p class="req" data-i18n="requiresMac">Requires macOS 14 Sonoma or later</p>
-    </section>
+      <!-- Linux panel -->
+      <section class="panel" id="panel-linux" role="tabpanel" data-os="linux">
+        <div class="cmd">
+          <code id="cmd-linux">curl -fsSL https://gemma.myclaw.one/install.sh | sh</code>
+          <button type="button" data-i18n="copy" onclick="copyText('cmd-linux', this)">复制</button>
+        </div>
+        <p class="hint" data-i18n="pasteTerminal">粘进终端</p>
+        <div class="aux">
+          <a href="https://github.com/microblue/one-click-gemma/blob/main/scripts/install.sh"
+             target="_blank" rel="noreferrer" data-i18n="viewSource">查看脚本源码</a>
+          <a href="https://github.com/microblue/one-click-gemma#readme"
+             target="_blank" rel="noreferrer" data-i18n="manualInstall">手动安装说明</a>
+        </div>
+        <p class="req" data-i18n="requiresSudo">Requires sudo (systemd or manual ollama serve)</p>
+      </section>
 
-    <!-- Linux panel -->
-    <section class="panel" id="panel-linux" role="tabpanel" data-os="linux">
-      <div class="cmd">
-        <code id="cmd-linux">curl -fsSL https://gemma.myclaw.one/install.sh | sh</code>
-        <button type="button" data-i18n="copy" onclick="copyText('cmd-linux', this)">复制</button>
-      </div>
-      <p class="hint" data-i18n="pasteTerminal">粘进终端</p>
+      <!-- Windows panel -->
+      <section class="panel" id="panel-win" role="tabpanel" data-os="win">
+        <div class="cmd">
+          <code id="cmd-win">irm https://gemma.myclaw.one/install.ps1 | iex</code>
+          <button type="button" data-i18n="copy" onclick="copyText('cmd-win', this)">复制</button>
+        </div>
+        <p class="hint" data-i18n="pastePowerShell">粘进 PowerShell</p>
+        <div class="or" data-i18n="or">或</div>
+        <a class="btn" data-i18n="downloadWin"
+           href="https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller-setup.exe"
+           download>下载 Windows 版</a>
+        <p class="req" data-i18n="requiresWin">Requires Windows 10 or later</p>
+      </section>
 
-      <div class="aux">
-        <a href="https://github.com/microblue/one-click-gemma/blob/main/scripts/install.sh"
-           target="_blank" rel="noreferrer" data-i18n="viewSource">查看脚本源码</a>
-        <a href="https://github.com/microblue/one-click-gemma#readme"
-           target="_blank" rel="noreferrer" data-i18n="manualInstall">手动安装说明</a>
-      </div>
-      <p class="req" data-i18n="requiresSudo">Requires sudo (systemd or manual ollama serve)</p>
-    </section>
+    </div>
 
-    <!-- Windows panel -->
-    <section class="panel" id="panel-win" role="tabpanel" data-os="win">
-      <div class="cmd">
-        <code id="cmd-win">irm https://gemma.myclaw.one/install.ps1 | iex</code>
-        <button type="button" data-i18n="copy" onclick="copyText('cmd-win', this)">复制</button>
-      </div>
-      <p class="hint" data-i18n="pastePowerShell">粘进 PowerShell</p>
-
-      <div class="or" data-i18n="or">或</div>
-
-      <a class="btn" data-i18n="downloadWin"
-         href="https://github.com/microblue/one-click-gemma/releases/latest/download/GemmaInstaller-setup.exe"
-         download>下载 Windows 版</a>
-      <p class="req" data-i18n="requiresWin">Requires Windows 10 or later</p>
-    </section>
-
-    <p class="foot">
-      Apache 2.0 ·
-      <a href="https://github.com/microblue/one-click-gemma">GitHub</a> ·
-      <a href="https://github.com/openclaw/openclaw">OpenClaw</a> ·
-      <a href="https://ollama.com">Ollama</a> ·
+    <p class="foot rise d7">
+      Apache 2.0
+      <span class="dot">·</span>
+      <a href="https://github.com/microblue/one-click-gemma">GitHub</a>
+      <span class="dot">·</span>
+      <a href="https://github.com/openclaw/openclaw">OpenClaw</a>
+      <span class="dot">·</span>
+      <a href="https://ollama.com">Ollama</a>
+      <span class="dot">·</span>
       <a href="https://deepmind.google/models/gemma/">Gemma</a>
     </p>
   </div>
@@ -321,6 +477,7 @@
         title:           "Gemma 4 一键安装",
         brand:           "MYCLAW.ONE 制作",
         sub:             "为 OpenClaw 准备一颗本地的 AI 大脑",
+        whatsNew:        "更新日志",
         pasteTerminal:   "粘进终端",
         pastePowerShell: "粘进 PowerShell",
         or:              "或",
@@ -332,13 +489,13 @@
         requiresSudo:    "需要 sudo (systemd 或手动 ollama serve)",
         requiresWin:     "需要 Windows 10 及以上",
         copy:            "复制",
-        copied:          "已复制 ✓",
-        whatsNew:        "· 更新"
+        copied:          "已复制"
       },
       en: {
         title:           "One-click Gemma 4",
         brand:           "MADE BY MYCLAW.ONE",
         sub:             "A local AI brain for OpenClaw",
+        whatsNew:        "what's new",
         pasteTerminal:   "paste this in terminal",
         pastePowerShell: "paste this in PowerShell",
         or:              "or",
@@ -350,8 +507,7 @@
         requiresSudo:    "Requires sudo (systemd or manual ollama serve)",
         requiresWin:     "Requires Windows 10 or later",
         copy:            "Copy",
-        copied:          "Copied ✓",
-        whatsNew:        "· what's new"
+        copied:          "Copied"
       }
     };
 
@@ -363,7 +519,6 @@
       var nav = (navigator.language || navigator.userLanguage || "").toLowerCase();
       return nav.indexOf("zh") === 0 ? "zh" : "en";
     }
-
     var currentLang = detectLang();
 
     function applyLang(lang) {
@@ -373,7 +528,14 @@
       document.title = (lang === "zh" ? "Gemma · 一键安装" : "Gemma · one-click install") + " · for OpenClaw";
       document.querySelectorAll("[data-i18n]").forEach(function (el) {
         var key = el.dataset.i18n;
-        if (t[key] != null) el.textContent = t[key];
+        if (t[key] != null) {
+          // for the "what's new" link we keep the arrow span separate
+          if (el.classList.contains("news")) {
+            el.querySelector("span:first-child").textContent = t[key];
+          } else {
+            el.textContent = t[key];
+          }
+        }
       });
       document.getElementById("lang-toggle").textContent = lang === "zh" ? "EN" : "中";
       try { localStorage.setItem("lang", lang); } catch (_) {}
@@ -412,14 +574,13 @@
     function copyText(id, btn) {
       var txt = document.getElementById(id).textContent;
       navigator.clipboard.writeText(txt).then(function () {
-        var label = TR[currentLang].copy;
-        var done = TR[currentLang].copied;
+        var done = TR[currentLang].copied + " ✓";
         btn.textContent = done;
         btn.disabled = true;
         setTimeout(function () {
-          btn.textContent = label;
+          btn.textContent = TR[currentLang].copy;
           btn.disabled = false;
-        }, 1500);
+        }, 1600);
       });
     }
 
