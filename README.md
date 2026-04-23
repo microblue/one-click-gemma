@@ -12,9 +12,11 @@ Get Google Gemma 4 running locally for [OpenClaw](https://github.com/openclaw/op
 |---|---|---|
 | macOS 14+ | `GemmaInstaller-1.0.0-universal.dmg` | 双击 DMG 把图标拖进 Applications，然后打开 |
 | Windows 10+ | `GemmaInstaller-1.0.0-x64-setup.exe` | 双击 EXE，跟着向导走 |
-| Linux | `install.sh` | `curl -fsSL https://<host>/install.sh \| sh` |
+| Linux | 脚本 | `curl -fsSL https://<host>/install.sh \| sh` |
 
-三端都会：装 Ollama → 拉 `gemma4:e4b`（9.6 GB）→ 自动把 `local-gemma4` provider 写进 OpenClaw → 打开 `http://127.0.0.1:11434/v1` 即用。
+Mac/Win 走双击图形向导，Linux 只走脚本通道（Linux 用户群能接受一条命令，同 Ollama 的做法）。
+
+三端都会：装 Ollama → 拉默认 `gemma4:e2b`（7.2 GB）→ 自动把 `local-gemma4` provider 写进 OpenClaw → 打开 `http://127.0.0.1:11434/v1` 即用。模型可在安装时选（270m 到 7.2GB）。
 
 ## Linux 命令行参数
 
@@ -54,8 +56,7 @@ cargo tauri build
 # 产物位置
 # macOS:   target/release/bundle/dmg/GemmaInstaller_1.0.0_universal.dmg
 # Windows: target/release/bundle/nsis/GemmaInstaller_1.0.0_x64-setup.exe
-# Linux:   target/release/bundle/appimage/gemma-installer_1.0.0_amd64.AppImage
-#          target/release/bundle/deb/gemma-installer_1.0.0_amd64.deb
+# (Linux 不构建 GUI; 只走 linux/install.sh 脚本)
 ```
 
 ### 布局
