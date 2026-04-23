@@ -8,9 +8,71 @@ on:
 
 jobs:
   # -------------------------------------------------------------------------
+  # Decide whether this tag is a patch-only bump (rebuild cheap but NOT
+  # needed; we can reuse the previous release's DMG/EXE with a filename
+  # rename) or a minor/major bump (full Tauri rebuild required).
+  #
+  # Rule: compare this tag's MAJOR.MINOR to previous tag's MAJOR.MINOR.
+  #   same   → patch-only, skip the build matrix
+  #   diff   → rebuild everything
+  # On workflow_dispatch (no tag) we always rebuild.
+  # -------------------------------------------------------------------------
+  plan:
+    runs-on: ubuntu-22.04
+    outputs:
+      rebuild: ${{ steps.decide.outputs.rebuild }}
+      prev_tag: ${{ steps.decide.outputs.prev_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Decide rebuild vs reuse
+        id: decide
+        run: |
+          set -eu
+          THIS_REF="${GITHUB_REF#refs/tags/}"
+          if [ "${GITHUB_REF}" = "${GITHUB_REF#refs/tags/v}" ]; then
+            echo "workflow_dispatch (no tag) → rebuild"
+            echo "rebuild=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          THIS_TAG="$THIS_REF"
+          # first tag before THIS_TAG in reverse-version order
+          PREV_TAG=$(git tag --sort=-v:refname \
+            | awk -v t="$THIS_TAG" 'found==1 {print; exit} $0==t {found=1}')
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "no previous tag → first release, rebuild"
+            echo "rebuild=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          TV="${THIS_TAG#v}"
+          PV="${PREV_TAG#v}"
+          THIS_MM=$(printf '%s' "$TV" | awk -F. '{print $1"."$2}')
+          PREV_MM=$(printf '%s' "$PV" | awk -F. '{print $1"."$2}')
+
+          echo "this_tag=$THIS_TAG (major.minor=$THIS_MM)"
+          echo "prev_tag=$PREV_TAG (major.minor=$PREV_MM)"
+
+          if [ "$THIS_MM" = "$PREV_MM" ]; then
+            echo "patch-only bump → REUSE previous binaries, skip Tauri build matrix"
+            echo "rebuild=false" >> "$GITHUB_OUTPUT"
+            echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "minor/major bump → full rebuild"
+            echo "rebuild=true" >> "$GITHUB_OUTPUT"
+            echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+  # -------------------------------------------------------------------------
   # Fast pre-check: Rust unit tests + install.sh static+behavioural tests
   # + install.sh docker e2e smoke (real model pull + chat). Linux is
   # script-only, so all its "deliverable" verification lives in this job.
+  # Always runs, regardless of rebuild/reuse decision.
   # -------------------------------------------------------------------------
   test:
     runs-on: ubuntu-22.04
@@ -88,9 +150,11 @@ jobs:
   # -------------------------------------------------------------------------
   # Native GUI installers for Mac + Windows only.
   # Linux is script-only (see test job's docker smoke).
+  # Skipped for patch-only bumps (plan.outputs.rebuild == 'false').
   # -------------------------------------------------------------------------
   build:
-    needs: test
+    needs: [plan, test]
+    if: needs.plan.outputs.rebuild == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -405,9 +469,83 @@ jobs:
 
           Write-Host '=== all Windows script smoke assertions passed ==='
 
+  # -------------------------------------------------------------------------
+  # Patch-only path: reuse previous release's DMG + EXE, rename them to the
+  # new version, repackage scripts from the current checkout. Runs on the
+  # cheap ubuntu-latest runner only — no Tauri compile, no Mac/Win builders.
+  # -------------------------------------------------------------------------
+  reuse:
+    needs: [plan, test]
+    if: needs.plan.outputs.rebuild == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull previous release's binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREV:     ${{ needs.plan.outputs.prev_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p prev dist-reused
+          # Download ONLY binaries from previous release. Scripts + version-
+          # stripped stable names come from the current checkout so docs
+          # and flags in install.sh/ps1 are up to date.
+          gh release download "$PREV" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir prev \
+            --pattern 'GemmaInstaller_*universal*.dmg' \
+            --pattern 'GemmaInstaller_*x64-setup*.exe' || true
+          ls -la prev
+
+      - name: Rename versioned artifacts with this tag's version
+        run: |
+          set -euo pipefail
+          THIS=${GITHUB_REF#refs/tags/}
+          TV=${THIS#v}
+          PREV=${{ needs.plan.outputs.prev_tag }}
+          PV=${PREV#v}
+          mkdir -p installer-macos-14 installer-windows-latest
+          for f in prev/GemmaInstaller_${PV}_*.dmg; do
+            [ -e "$f" ] || continue
+            new=$(basename "$f" | sed "s/_${PV}_/_${TV}_/")
+            cp "$f" "installer-macos-14/$new"
+          done
+          for f in prev/GemmaInstaller_${PV}_*.exe; do
+            [ -e "$f" ] || continue
+            new=$(basename "$f" | sed "s/_${PV}_/_${TV}_/")
+            cp "$f" "installer-windows-latest/$new"
+          done
+          echo '--- renamed mac ---'; ls -la installer-macos-14
+          echo '--- renamed win ---'; ls -la installer-windows-latest
+
+      - name: Re-upload as actions artifacts for the release job
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-macos-14
+          path: installer-macos-14/*
+          if-no-files-found: error
+
+      - name: Re-upload windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-windows-latest
+          path: installer-windows-latest/*
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------------
+  # Publish the GitHub Release. Runs after EITHER build (rebuild=true) OR
+  # reuse (rebuild=false) produced the installer-{macos-14,windows-latest}
+  # actions artifacts.
+  # -------------------------------------------------------------------------
   release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [plan, build, reuse]
+    if: |
+      always() &&
+      startsWith(github.ref, 'refs/tags/v') &&
+      (needs.build.result == 'success' || needs.reuse.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write
