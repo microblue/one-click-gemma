@@ -392,7 +392,7 @@
     <h1 class="rise d2" data-i18n="title">Gemma 4 一键安装</h1>
 
     <p class="meta-line rise d3">
-      <span class="v">v1.0.3</span>
+      <span class="v" id="version">v1.0.3</span>
       <span class="sep">·</span>
       <a class="news" href="/whats-new" data-i18n="whatsNew">
         <span>更新日志</span>
@@ -584,12 +584,47 @@
       });
     }
 
+    // ---------------- live version from GitHub Releases ----------------
+    // Pulls the latest release tag so every new release auto-updates this
+    // page without a redeploy. Cached 10 min in sessionStorage to stay
+    // under GitHub's 60/hr anonymous API rate limit for repeat visits.
+    function updateLatestVersion() {
+      var CK_V = "gemma-latest-ver";
+      var CK_T = "gemma-latest-ver-t";
+      var TTL  = 10 * 60 * 1000;
+      try {
+        var v = sessionStorage.getItem(CK_V);
+        var t = Number(sessionStorage.getItem(CK_T) || 0);
+        if (v && Date.now() - t < TTL) {
+          setVer(v);
+          return;
+        }
+      } catch (_) {}
+      fetch("https://api.github.com/repos/microblue/one-click-gemma/releases/latest")
+        .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+        .then(function (d) {
+          var tag = d && d.tag_name;
+          if (!tag) return;
+          setVer(tag);
+          try {
+            sessionStorage.setItem(CK_V, tag);
+            sessionStorage.setItem(CK_T, String(Date.now()));
+          } catch (_) {}
+        })
+        .catch(function () { /* silent — keep hardcoded fallback */ });
+    }
+    function setVer(tag) {
+      var el = document.getElementById("version");
+      if (el) el.textContent = tag;
+    }
+
     // ---------------- boot ----------------
     document.getElementById("lang-toggle").addEventListener("click", function () {
       applyLang(currentLang === "zh" ? "en" : "zh");
     });
     applyLang(currentLang);
     initTabs();
+    updateLatestVersion();
   </script>
 </body>
 </html>
