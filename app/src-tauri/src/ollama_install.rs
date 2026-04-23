@@ -140,6 +140,14 @@ async fn install_windows(app: AppHandle) -> Result<()> {
     emit(&app, "ollama", "下载 OllamaSetup.exe", Some(5));
     download_with_progress(&app, "ollama", url, &tmp, 5, 80).await?;
 
+    // Seed the "upgraded" marker so Ollama's tray app starts hidden on first
+    // launch (mirrors upstream install.ps1). Harmless if it already exists.
+    if let Ok(local) = std::env::var("LOCALAPPDATA") {
+        let dir = PathBuf::from(&local).join("Ollama");
+        let _ = tokio::fs::create_dir_all(&dir).await;
+        let _ = tokio::fs::write(dir.join("upgraded"), b"").await;
+    }
+
     emit(&app, "ollama", "静默运行安装程序", Some(85));
     let status = Command::new(&tmp)
         .args(["/VERYSILENT", "/NORESTART", "/SUPPRESSMSGBOXES"])
@@ -196,6 +204,50 @@ async fn install_windows(app: AppHandle) -> Result<()> {
     }
 
     let _ = tokio::fs::remove_file(&tmp).await;
+
+    // Fresh Windows installs: OllamaSetup.exe does NOT always auto-launch
+    // the tray app, which means no `ollama serve` is running and the next
+    // step's /api/version poll times out at 60s. Launch it explicitly here.
+    // If Ollama was already running (user pre-installed, installer was a
+    // no-op), the second Start-Process is a cheap no-op since :11434 is
+    // already bound.
+    if let Ok(local) = std::env::var("LOCALAPPDATA") {
+        let tray = PathBuf::from(&local).join("Programs").join("Ollama").join("ollama app.exe");
+        let exe  = PathBuf::from(&local).join("Programs").join("Ollama").join("ollama.exe");
+        emit(&app, "ollama", "启动 Ollama 后台服务", Some(95));
+        let launched = if tray.exists() {
+            let path = tray.display().to_string().replace('\'', "''");
+            let ps = format!(
+                "Start-Process -FilePath '{path}' -WindowStyle Hidden -ErrorAction SilentlyContinue"
+            );
+            let _ = Command::new("powershell")
+                .args(["-NoProfile", "-Command", &ps])
+                .status()
+                .await;
+            true
+        } else if exe.exists() {
+            let path = exe.display().to_string().replace('\'', "''");
+            let ps = format!(
+                "Start-Process -FilePath '{path}' -ArgumentList 'serve' -WindowStyle Hidden -ErrorAction SilentlyContinue"
+            );
+            let _ = Command::new("powershell")
+                .args(["-NoProfile", "-Command", &ps])
+                .status()
+                .await;
+            true
+        } else {
+            false
+        };
+        if !launched {
+            emit(
+                &app,
+                "ollama",
+                "未找到 Ollama 可执行文件, 下一步健康检查可能超时".to_string(),
+                Some(95),
+            );
+        }
+    }
+
     emit(&app, "ollama", "Ollama 安装完成", Some(100));
     Ok(())
 }

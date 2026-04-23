@@ -77,9 +77,30 @@ jobs:
           echo "prev_tag=$PREV_TAG (major.minor=$PREV_MM)"
 
           if [ "$THIS_MM" = "$PREV_MM" ]; then
-            echo "patch-only bump → REUSE previous binaries, skip Tauri build matrix"
-            echo "rebuild=false" >> "$GITHUB_OUTPUT"
-            echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+            # Patch bump usually means UI/site-only changes (reuse is safe).
+            # BUT if any binary-affecting file changed between prev_tag and
+            # this tag, we must rebuild — otherwise the reuse path would
+            # ship stale binaries. Inspect the diff explicitly rather than
+            # trusting the version number alone.
+            CHANGED=$(git diff --name-only "$PREV_TAG..$THIS_TAG" -- \
+              'app/src-tauri/src/' \
+              'app/src-tauri/build.rs' \
+              'app/src-tauri/capabilities/' \
+              'app/src-tauri/icons/' \
+              'app/src/' \
+              'scripts/install.sh' \
+              'scripts/install.ps1' 2>/dev/null)
+            if [ -n "$CHANGED" ]; then
+              echo "patch-level version but binary-affecting files changed:"
+              echo "$CHANGED" | sed 's/^/  /'
+              echo "→ forcing full rebuild"
+              echo "rebuild=true" >> "$GITHUB_OUTPUT"
+              echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+            else
+              echo "patch-only bump, no binary-affecting changes → REUSE previous binaries"
+              echo "rebuild=false" >> "$GITHUB_OUTPUT"
+              echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "minor/major bump → full rebuild"
             echo "rebuild=true" >> "$GITHUB_OUTPUT"
