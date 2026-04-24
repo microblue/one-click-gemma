@@ -39,7 +39,6 @@ gemma3:1b 2 2
 gemma3:4b 6 5
 gemma4:e2b 9 11
 '
-DEFAULT_MODEL="gemma4:e2b"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -483,7 +482,6 @@ pick_model_interactive() {
     printf '%s%s%s\n\n' "$C_DIM" "$(t pick_hardware "$RAM_GB" "$DISK_GB")" "$C_RESET"
 
     idx=0
-    default_idx=4
     while IFS=' ' read -r id ram disk; do
         [ -z "$id" ] && continue
         idx=$((idx + 1))
@@ -494,7 +492,6 @@ pick_model_interactive() {
             marker=" ${C_RED}[$(t pick_unfit)]${C_RESET}"
         fi
         if [ "$id" = "$default_id" ]; then
-            default_idx=$idx
             marker="${marker} ${C_YELLOW}← $(t pick_recommend)${C_RESET}"
         fi
         printf '  %s) %s%s%s  %s(RAM≥%sG, disk≥%sG)%s%s\n' \
@@ -796,7 +793,11 @@ PY
 # final banner
 # ---------------------------------------------------------------------------
 done_banner() {
-    oc_state=$([ "$SKIP_OPENCLAW" = "1" ] && t done_skipped || t done_configured)
+    if [ "$SKIP_OPENCLAW" = "1" ]; then
+        oc_state=$(t done_skipped)
+    else
+        oc_state=$(t done_configured)
+    fi
     cat <<DONE
 
 ${C_GREEN}${C_BOLD}  ✓ $(t done_title)${C_RESET}
