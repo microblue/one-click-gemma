@@ -160,10 +160,13 @@ jobs:
         working-directory: app/src-tauri
         run: |
           set +e
+          # --wait-secs 3 → headless exits ~3 s after wait_ollama timeout;
+          # outer `timeout 30` is just a safety net, not the trigger.
           timeout 30 ./target/debug/gemma-installer --headless \
             --skip-install --no-openclaw \
             --endpoint http://127.0.0.1:39999 \
-            --model gemma3:270m > hl.out 2>&1
+            --model gemma3:270m \
+            --wait-secs 3 > hl.out 2>&1
           code=$?
           set -e
           echo "--- headless output ---"

@@ -32,6 +32,9 @@ pub struct Args {
     pub skip_install: bool,
     pub prompt: String,
     pub require_network: bool,
+    /// Budget for `wait_ollama` in seconds. CI error-path smoke uses a short
+    /// value so the "unreachable endpoint" case fails in seconds, not minutes.
+    pub wait_secs: u64,
 }
 
 impl Default for Args {
@@ -43,6 +46,7 @@ impl Default for Args {
             skip_install: false,
             prompt: "say hi in 3 words".to_string(),
             require_network: false,
+            wait_secs: 60,
         }
     }
 }
@@ -82,6 +86,15 @@ where
             "--no-openclaw" => args.no_openclaw = true,
             "--skip-install" => args.skip_install = true,
             "--require-network" => args.require_network = true,
+            "--wait-secs" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--wait-secs requires a value".to_string())?;
+                args.wait_secs = raw
+                    .as_ref()
+                    .parse()
+                    .map_err(|_| format!("--wait-secs must be a positive integer, got {:?}", raw.as_ref()))?;
+            }
             other => return Err(format!("unknown flag: {other}")),
         }
     }
@@ -190,8 +203,8 @@ pub async fn run(args: Args) -> i32 {
         rep.log("[1/4] install_ollama SKIPPED (--skip-install)");
     }
 
-    rep.log("[2/4] wait_ollama (up to 60s)");
-    match ollama_service::wait_until_ready(&args.endpoint, 60).await {
+    rep.log(&format!("[2/4] wait_ollama (up to {}s)", args.wait_secs));
+    match ollama_service::wait_until_ready(&args.endpoint, args.wait_secs).await {
         Ok(ver) => rep.log(&format!("[ready] ollama version={ver}")),
         Err(e) => {
             rep.errlog(&format!("[error] wait_ollama: {e:#}"));
@@ -256,6 +269,19 @@ mod tests {
         assert!(!a.skip_install);
         assert_eq!(a.prompt, "say hi in 3 words");
         assert!(!a.require_network);
+        assert_eq!(a.wait_secs, 60);
+    }
+
+    #[test]
+    fn parses_wait_secs() {
+        let a = parse_args(["--wait-secs", "3"]).unwrap();
+        assert_eq!(a.wait_secs, 3);
+    }
+
+    #[test]
+    fn rejects_invalid_wait_secs() {
+        let err = parse_args(["--wait-secs", "abc"]).unwrap_err();
+        assert!(err.contains("--wait-secs"), "got: {err}");
     }
 
     #[test]
