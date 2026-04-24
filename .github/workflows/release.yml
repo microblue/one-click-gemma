@@ -402,6 +402,7 @@ jobs:
       # can be detached — we capture progress via GEMMA_HEADLESS_LOG file.
       - name: Headless smoke — full install+pull+chat via bundled exe (Windows)
         if: matrix.os == 'windows-latest'
+        timeout-minutes: 15
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -421,7 +422,10 @@ jobs:
 
           # Start-Process -PassThru + WaitForExit(timeout) — same pattern the
           # installer itself uses; survives grandchildren (Ollama tray).
-          $args = @('--headless','--model','gemma3:270m','--no-openclaw','--prompt','say hi in 3 words')
+          # Skip --prompt: pwsh's Start-Process -ArgumentList won't quote an
+          # element that contains spaces, which would break argv splitting.
+          # Default prompt ("say hi in 3 words") is already what we want.
+          $args = @('--headless','--model','gemma3:270m','--no-openclaw')
           Write-Host "launching: $exe $args"
           $proc = Start-Process -FilePath $exe -ArgumentList $args -PassThru
           # 10 min — covers Ollama fresh-install (~200 MB) + gemma3:270m pull (~292 MB)
@@ -533,6 +537,7 @@ jobs:
       # → send_chat_test — the same command sequence the GUI invokes.
       - name: Headless smoke — full install+pull+chat via bundled bin (macOS)
         if: matrix.os == 'macos-14'
+        timeout-minutes: 15
         shell: bash
         run: |
           set -euo pipefail
@@ -544,8 +549,9 @@ jobs:
 
           echo "launching: $BIN --headless --model gemma3:270m --no-openclaw"
           set +e
-          # 10 min ceiling — Ollama fresh-install via DMG + gemma3:270m pull
-          timeout 600 "$BIN" --headless \
+          # macOS lacks GNU `timeout`; rely on the step-level timeout-minutes
+          # and let the binary run until it finishes or the step budget fires.
+          "$BIN" --headless \
             --model gemma3:270m --no-openclaw \
             --prompt "say hi in 3 words"
           code=$?
