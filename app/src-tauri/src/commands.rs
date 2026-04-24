@@ -1,3 +1,4 @@
+use crate::progress::TauriReporter;
 use crate::{chat_test, model_pull, ollama_install, ollama_service, openclaw, sysinfo};
 use tauri::AppHandle;
 use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -13,7 +14,8 @@ pub async fn run_preflight() -> Result<sysinfo::PreflightReport, String> {
 
 #[tauri::command]
 pub async fn install_ollama(app: AppHandle) -> Result<(), String> {
-    ollama_install::install_ollama(app).await.map_err(err)
+    let reporter = TauriReporter(app);
+    ollama_install::install_ollama(&reporter).await.map_err(err)
 }
 
 #[tauri::command]
@@ -25,7 +27,8 @@ pub async fn wait_ollama() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn pull_model(app: AppHandle, model: String) -> Result<(), String> {
-    model_pull::pull(app, ollama_service::DEFAULT_ENDPOINT, &model)
+    let reporter = TauriReporter(app);
+    model_pull::pull(&reporter, ollama_service::DEFAULT_ENDPOINT, &model)
         .await
         .map_err(err)
 }

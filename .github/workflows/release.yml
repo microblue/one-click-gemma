@@ -148,6 +148,41 @@ jobs:
         working-directory: app/src-tauri
         run: cargo test --lib --no-fail-fast
 
+      # ---------- headless error-path smoke: network-unreachable endpoint -----
+      # Builds the bin in debug (faster than --release) and drives --headless
+      # with a pointed-at-nothing endpoint. Must exit 11 (wait_ollama timeout)
+      # in under ~5 s, never hang, and surface a clear diagnostic.
+      - name: Build gemma-installer (debug) for headless error-path smoke
+        working-directory: app/src-tauri
+        run: cargo build --bin gemma-installer
+
+      - name: Headless smoke — unreachable endpoint must fail fast with code 11
+        working-directory: app/src-tauri
+        run: |
+          set +e
+          timeout 30 ./target/debug/gemma-installer --headless \
+            --skip-install --no-openclaw \
+            --endpoint http://127.0.0.1:39999 \
+            --model gemma3:270m > hl.out 2>&1
+          code=$?
+          set -e
+          echo "--- headless output ---"
+          cat hl.out
+          echo "--- exit=$code ---"
+          test "$code" = "11" || { echo "expected exit 11 (wait_ollama timeout), got $code"; exit 1; }
+          grep -q "未就绪" hl.out || { echo "missing Chinese 'not ready' marker in output"; exit 1; }
+
+      - name: Headless smoke — bogus flag must exit 2
+        working-directory: app/src-tauri
+        run: |
+          set +e
+          ./target/debug/gemma-installer --headless --bogus > hl.out 2>&1
+          code=$?
+          set -e
+          cat hl.out
+          test "$code" = "2" || { echo "expected exit 2 for bad flag, got $code"; exit 1; }
+          grep -q "unknown flag" hl.out || { echo "missing 'unknown flag' diagnostic"; exit 1; }
+
       # ---------- install.sh Docker smoke: end-to-end with real model pull
       # Uses the tiny gemma3:270m (~292 MB) so we can exercise the real
       # `ollama pull` path in CI without pulling the production-default 7.2 GB.
@@ -356,6 +391,72 @@ jobs:
           path: smoke/*.png
           if-no-files-found: ignore
 
+      # ---------- Windows headless smoke: full Rust-command e2e ---------------
+      # Invokes the installed gemma-installer.exe with --headless to drive the
+      # exact Rust command sequence the GUI triggers via invoke():
+      #   install_ollama → wait_ollama → pull_model → inject_openclaw → send_chat_test
+      # The release build is compiled with windows_subsystem="windows" so stdout
+      # can be detached — we capture progress via GEMMA_HEADLESS_LOG file.
+      - name: Headless smoke — full install+pull+chat via bundled exe (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $candidates = @(
+            "${env:LOCALAPPDATA}\GemmaInstaller\gemma-installer.exe",
+            "${env:LOCALAPPDATA}\Programs\GemmaInstaller\gemma-installer.exe",
+            "${env:ProgramFiles}\GemmaInstaller\gemma-installer.exe",
+            "${env:ProgramFiles(x86)}\GemmaInstaller\gemma-installer.exe"
+          )
+          $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) { throw 'gemma-installer.exe not found; NSIS install did not leave it on disk' }
+          Write-Host "using: $exe"
+
+          $log = Join-Path $env:GITHUB_WORKSPACE 'headless.log'
+          $env:GEMMA_HEADLESS_LOG = $log
+          Remove-Item $log -ErrorAction SilentlyContinue
+
+          # Start-Process -PassThru + WaitForExit(timeout) — same pattern the
+          # installer itself uses; survives grandchildren (Ollama tray).
+          $args = @('--headless','--model','gemma3:270m','--no-openclaw','--prompt','say hi in 3 words')
+          Write-Host "launching: $exe $args"
+          $proc = Start-Process -FilePath $exe -ArgumentList $args -PassThru
+          # 10 min — covers Ollama fresh-install (~200 MB) + gemma3:270m pull (~292 MB)
+          if (-not $proc.WaitForExit(600000)) {
+            try { $proc.Kill() } catch {}
+            Write-Host '--- headless.log (truncated) ---'
+            if (Test-Path $log) { Get-Content $log -Tail 60 | Write-Host }
+            throw 'headless smoke timed out after 10 min'
+          }
+          $code = $proc.ExitCode
+          Write-Host "--- headless.log (last 80 lines) ---"
+          if (Test-Path $log) { Get-Content $log -Tail 80 | Write-Host } else { Write-Host '(no log file)' }
+          Write-Host "exit=$code"
+
+          if ($code -ne 0) { throw "headless smoke failed, exit=$code" }
+          if (-not (Test-Path $log)) { throw 'headless.log was never written' }
+
+          $content = Get-Content $log -Raw
+          foreach ($must in @('[1/4]','[2/4]','[3/4]','[4b/4]','ALL STEPS PASSED','[chat] OK')) {
+            if ($content -notlike "*$must*") { throw "headless.log missing marker: $must" }
+          }
+
+          # Also assert the OpenAI-compatible API is actually live after the run
+          $v = curl.exe -fsS http://127.0.0.1:11434/api/version | ConvertFrom-Json
+          Write-Host "ollama version: $($v.version)"
+          $models = curl.exe -fsS http://127.0.0.1:11434/v1/models | ConvertFrom-Json
+          $ids = @($models.data | ForEach-Object { $_.id })
+          if ('gemma3:270m' -notin $ids) { throw "model not pulled by headless; ids=$ids" }
+          Write-Host 'HEADLESS SMOKE OK'
+
+      - name: Upload Windows headless log
+        if: always() && matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-headless-log
+          path: headless.log
+          if-no-files-found: ignore
+
       # ---------- macOS smoke test: mount dmg, install, launch, screenshot ----
       - name: Smoke-test the macOS DMG
         if: matrix.os == 'macos-14'
@@ -421,6 +522,56 @@ jobs:
         with:
           name: macos-smoke-screenshot
           path: smoke/*.png
+          if-no-files-found: ignore
+
+      # ---------- macOS headless smoke: full Rust-command e2e ----------------
+      # Drives the bundled binary inside GemmaInstaller.app with --headless,
+      # exercising install_ollama → wait_ollama → pull_model → inject_openclaw
+      # → send_chat_test — the same command sequence the GUI invokes.
+      - name: Headless smoke — full install+pull+chat via bundled bin (macOS)
+        if: matrix.os == 'macos-14'
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="/Applications/GemmaInstaller.app"
+          BIN="$APP/Contents/MacOS/gemma-installer"
+          test -x "$BIN" || { ls -la "$APP/Contents/MacOS/" || true; echo "bundled bin missing at $BIN"; exit 1; }
+          export GEMMA_HEADLESS_LOG="$GITHUB_WORKSPACE/headless.log"
+          rm -f "$GEMMA_HEADLESS_LOG"
+
+          echo "launching: $BIN --headless --model gemma3:270m --no-openclaw"
+          set +e
+          # 10 min ceiling — Ollama fresh-install via DMG + gemma3:270m pull
+          timeout 600 "$BIN" --headless \
+            --model gemma3:270m --no-openclaw \
+            --prompt "say hi in 3 words"
+          code=$?
+          set -e
+          echo "--- headless.log (last 80 lines) ---"
+          if [ -f "$GEMMA_HEADLESS_LOG" ]; then tail -80 "$GEMMA_HEADLESS_LOG"; else echo "(no log)"; fi
+          echo "exit=$code"
+
+          test "$code" = "0" || { echo "headless smoke failed, exit=$code" >&2; exit 1; }
+          test -f "$GEMMA_HEADLESS_LOG" || { echo "headless.log not written" >&2; exit 1; }
+
+          # Required markers must all appear
+          for must in "[1/4]" "[2/4]" "[3/4]" "[4b/4]" "ALL STEPS PASSED" "[chat] OK"; do
+            grep -qF "$must" "$GEMMA_HEADLESS_LOG" || { echo "missing marker: $must"; exit 1; }
+          done
+
+          # Verify Ollama is actually live post-run
+          curl -fsS --max-time 5 http://127.0.0.1:11434/api/version
+          echo
+          curl -fsS --max-time 5 http://127.0.0.1:11434/v1/models | \
+            python3 -c "import json,sys; d=json.load(sys.stdin); ids=[m['id'] for m in d['data']]; assert 'gemma3:270m' in ids, ids; print('pulled ok:', ids)"
+          echo 'HEADLESS SMOKE OK'
+
+      - name: Upload macOS headless log
+        if: always() && matrix.os == 'macos-14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-headless-log
+          path: headless.log
           if-no-files-found: ignore
 
       # ---------- macOS script smoke: run scripts/install.sh directly ---------
@@ -559,6 +710,74 @@ jobs:
           done
           echo '--- renamed mac ---'; ls -la installer-macos-14
           echo '--- renamed win ---'; ls -la installer-windows-latest
+
+      # After rename, verify the bytes are intact and the files look like
+      # what they claim to be. Guards against subtle rename/copy bugs and
+      # ensures we never publish a zero-byte or mis-magic-number artifact.
+      - name: Verify renamed artifacts are bit-identical and well-formed
+        run: |
+          set -euo pipefail
+          fail=0
+
+          check_copy() {
+            local src="$1" dst="$2"
+            if [ ! -s "$dst" ]; then
+              echo "::error::renamed artifact $dst is empty or missing"; fail=1; return
+            fi
+            local ss; ss=$(stat -c%s "$src")
+            local ds; ds=$(stat -c%s "$dst")
+            if [ "$ss" != "$ds" ]; then
+              echo "::error::size mismatch $src ($ss) vs $dst ($ds)"; fail=1; return
+            fi
+            local sh; sh=$(sha256sum "$src" | awk '{print $1}')
+            local dh; dh=$(sha256sum "$dst" | awk '{print $1}')
+            if [ "$sh" != "$dh" ]; then
+              echo "::error::sha256 mismatch $src vs $dst"; fail=1; return
+            fi
+            echo "  ok: $(basename "$dst") $ds bytes sha=$dh"
+          }
+
+          echo '--- mac artifacts ---'
+          for f in prev/GemmaInstaller_*.dmg; do
+            [ -e "$f" ] || continue
+            PV=$(echo "$f" | sed -n 's/.*GemmaInstaller_\([^_]*\)_.*/\1/p')
+            TV="${GITHUB_REF#refs/tags/v}"
+            new="installer-macos-14/$(basename "$f" | sed "s/_${PV}_/_${TV}_/")"
+            # DMG first 8 bytes don't have a fixed magic (trailing "koly" marker
+            # at EOF is the real signature). Check tail instead — it's cheap.
+            tail -c 4 "$new" > /tmp/tail.bin
+            if ! grep -q "koly" /tmp/tail.bin 2>/dev/null; then
+              # Some DMGs have the koly block not exactly at EOF; accept if
+              # "koly" appears in the last 512 bytes.
+              if ! tail -c 512 "$new" | grep -q "koly"; then
+                echo "::error::$new does not look like a DMG (missing koly trailer)"
+                fail=1
+                continue
+              fi
+            fi
+            check_copy "$f" "$new"
+          done
+
+          echo '--- windows artifacts ---'
+          for f in prev/GemmaInstaller_*.exe; do
+            [ -e "$f" ] || continue
+            PV=$(echo "$f" | sed -n 's/.*GemmaInstaller_\([^_]*\)_.*/\1/p')
+            TV="${GITHUB_REF#refs/tags/v}"
+            new="installer-windows-latest/$(basename "$f" | sed "s/_${PV}_/_${TV}_/")"
+            # PE: first two bytes must be "MZ" (0x4D 0x5A)
+            magic=$(head -c 2 "$new" | xxd -p)
+            if [ "$magic" != "4d5a" ]; then
+              echo "::error::$new does not start with MZ (got $magic); not a PE binary"
+              fail=1
+              continue
+            fi
+            check_copy "$f" "$new"
+          done
+
+          if [ "$fail" != "0" ]; then
+            echo "::error::reuse verification failed"; exit 1
+          fi
+          echo 'REUSE VERIFY OK — all renamed artifacts are bit-identical and magic-valid'
 
       - name: Re-upload as actions artifacts for the release job
         uses: actions/upload-artifact@v4

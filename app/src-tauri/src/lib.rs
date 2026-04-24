@@ -1,9 +1,11 @@
 mod chat_test;
 mod commands;
+pub mod headless;
 mod model_pull;
 mod ollama_install;
 mod ollama_service;
 mod openclaw;
+mod progress;
 mod sysinfo;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
