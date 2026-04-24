@@ -124,10 +124,30 @@ async fn install_macos(reporter: &dyn Reporter) -> Result<()> {
     let _ = tokio::fs::remove_file(&tmp).await;
 
     reporter.install("ollama", "启动 Ollama.app", Some(95));
+    // `open -g` launches the tray app in the background. On a proper desktop
+    // session this registers the /usr/local/bin/ollama symlink and starts the
+    // daemon via its GUI supervisor. On headless runners (CI), the GUI
+    // supervisor may silently no-op, so /api/version never comes up.
     Command::new("open")
+        .args(["-g"])
         .arg("/Applications/Ollama.app")
         .status()
         .await?;
+
+    // Belt-and-suspenders: if the bundled ollama binary exists, also spawn
+    // `ollama serve` directly as a detached daemon. Idempotent — the second
+    // serve call will fail-fast with EADDRINUSE if the tray app already
+    // bound :11434, which is harmless.
+    let bundled = PathBuf::from("/Applications/Ollama.app/Contents/Resources/ollama");
+    if bundled.is_file() {
+        reporter.install("ollama", "直接启动 ollama serve 作为后台服务", Some(97));
+        let _ = Command::new(&bundled)
+            .arg("serve")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .stdin(Stdio::null())
+            .spawn();
+    }
 
     reporter.install("ollama", "Ollama 安装完成", Some(100));
     Ok(())

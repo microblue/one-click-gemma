@@ -444,8 +444,10 @@ jobs:
           if (-not (Test-Path $log)) { throw 'headless.log was never written' }
 
           $content = Get-Content $log -Raw
+          # Use .Contains() (literal), not -like which treats [ ] as wildcard
+          # character classes — '[chat] OK' would always appear absent.
           foreach ($must in @('[1/4]','[2/4]','[3/4]','[4b/4]','ALL STEPS PASSED','[chat] OK')) {
-            if ($content -notlike "*$must*") { throw "headless.log missing marker: $must" }
+            if (-not $content.Contains($must)) { throw "headless.log missing marker: $must" }
           }
 
           # Also assert the OpenAI-compatible API is actually live after the run
