@@ -2,6 +2,7 @@ use crate::progress::TauriReporter;
 use crate::{chat_test, model_pull, ollama_install, ollama_service, openclaw, sysinfo};
 use tauri::AppHandle;
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_shell::ShellExt;
 
 fn err<E: std::fmt::Display>(e: E) -> String {
     e.to_string()
@@ -56,4 +57,17 @@ pub async fn copy_to_clipboard(app: AppHandle, text: String) -> Result<(), Strin
 #[tauri::command]
 pub fn get_api_url() -> String {
     format!("{}/v1", ollama_service::DEFAULT_ENDPOINT)
+}
+
+/// Open https://myclaw.one in the user's default browser. URL is hardcoded
+/// so a compromised frontend can't trick us into opening arbitrary links.
+#[tauri::command]
+pub fn open_myclaw(app: AppHandle) -> Result<(), String> {
+    // tauri-plugin-shell's Shell::open is deprecated in favor of
+    // tauri-plugin-opener, but still works in 2.x and keeps the plugin
+    // surface tiny. Revisit when upgrading Tauri past the deprecation cliff.
+    #[allow(deprecated)]
+    app.shell()
+        .open("https://myclaw.one", None)
+        .map_err(err)
 }

@@ -428,3 +428,35 @@ code {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.made-by {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  text-align: center;
+  pointer-events: none;
+}
+.made-by-link {
+  pointer-events: auto;
+  background: transparent;
+  border: 0;
+  color: var(--dim);
+  font: 600 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.made-by-link:hover {
+  color: var(--accent);
+  background: rgba(255, 107, 61, 0.08);
+}
+.made-by-link:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Reserve bottom space so primary CTAs never overlap with the fixed footer. */
+#app { padding-bottom: 48px; }

@@ -23,6 +23,7 @@ pub fn run() {
             commands::send_chat_test,
             commands::copy_to_clipboard,
             commands::get_api_url,
+            commands::open_myclaw,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

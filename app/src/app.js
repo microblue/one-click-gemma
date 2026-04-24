@@ -356,6 +356,18 @@ document.getElementById("btn-quit").addEventListener("click", () => {
 });
 
 // ---------------------------------------------------------------------------
+// attribution footer — open https://myclaw.one in the user's default browser
+// via a Tauri command so the link works regardless of WebView URL policy.
+// ---------------------------------------------------------------------------
+document.getElementById("made-by-link").addEventListener("click", async () => {
+  try {
+    await invoke("open_myclaw");
+  } catch (e) {
+    console.error("open_myclaw failed:", e);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // boot
 // ---------------------------------------------------------------------------
 renderModelPicker();
