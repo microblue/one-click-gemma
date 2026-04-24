@@ -429,34 +429,27 @@ code {
   word-break: break-word;
 }
 
-.made-by {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 10px;
-  text-align: center;
-  pointer-events: none;
-}
-.made-by-link {
-  pointer-events: auto;
+/* Prominent attribution right under the H1 — same slot as the site hero's
+   "MYCLAW.ONE 制作" brand line. Accent-tinted so it reads as a live link,
+   not tiny chrome. Click opens https://myclaw.one via the open_myclaw
+   Tauri command (URL hardcoded — no input injection). */
+.brand-line {
   background: transparent;
   border: 0;
-  color: var(--dim);
-  font: 600 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  letter-spacing: 0.18em;
+  color: var(--accent);
+  font: 700 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.22em;
   cursor: pointer;
   padding: 6px 10px;
+  margin: -4px 0 2px;
   border-radius: 4px;
-  transition: color 0.12s ease, background 0.12s ease;
+  transition: background 0.12s ease, color 0.12s ease;
 }
-.made-by-link:hover {
-  color: var(--accent);
-  background: rgba(255, 107, 61, 0.08);
+.brand-line:hover {
+  color: var(--accent-hover);
+  background: rgba(255, 107, 61, 0.10);
 }
-.made-by-link:focus-visible {
+.brand-line:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 2px;
 }
-
-/* Reserve bottom space so primary CTAs never overlap with the fixed footer. */
-#app { padding-bottom: 48px; }
