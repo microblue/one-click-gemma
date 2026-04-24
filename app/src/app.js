@@ -290,7 +290,9 @@ function escapeAttr(s) { return escapeHtml(s); }
 // ---------------------------------------------------------------------------
 async function sendChat(prompt) {
   const out = document.getElementById("chat-output");
-  out.textContent = "（正在生成…）";
+  // First call can spend 30-60 s loading the weights into RAM before the
+  // first token comes back — tell the user so they don't think it froze.
+  out.textContent = "（正在生成… 首次可能要等模型加载,最多 5 分钟）";
   try {
     const reply = await invoke("send_chat_test", { model: selectedModel.id, prompt });
     out.textContent = reply;

@@ -1,25 +1,62 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use serde_json::{json, Value};
+
+/// Budget for a single chat round-trip, in seconds.
+///
+/// First-time load of gemma4:e2b (~7.2 GB) on a cold CPU can easily exceed
+/// a minute before the first token; the prior 60 s ceiling manifested as
+/// reqwest's generic "error decoding response body" when the HTTP body was
+/// cut mid-stream by the client-side deadline. 5 min covers pathological
+/// cold loads on spinning-rust Macs; subsequent calls are cached and fast.
+const CHAT_TIMEOUT_SECS: u64 = 300;
 
 pub async fn send(endpoint: &str, model: &str, prompt: &str) -> Result<String> {
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(60))
+        .timeout(std::time::Duration::from_secs(CHAT_TIMEOUT_SECS))
         .build()?;
 
     let url = build_url(endpoint);
     let body = build_body(model, prompt);
 
-    let resp = client.post(&url).json(&body).send().await?;
-    if !resp.status().is_success() {
+    let resp = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .context("POST /v1/chat/completions send failed (network/timeout)")?;
+    let status = resp.status();
+    if !status.is_success() {
+        let body_preview = resp.text().await.unwrap_or_default();
         return Err(anyhow!(
-            "chat/completions HTTP {}: {}",
-            resp.status(),
-            resp.text().await.unwrap_or_default()
+            "chat/completions HTTP {status}: {}",
+            truncate(&body_preview, 500)
         ));
     }
 
-    let v: Value = resp.json().await?;
+    // Read body as bytes first, then try JSON. Surfacing the raw bytes on
+    // parse failure makes "error decoding response body" — reqwest's
+    // opaque default — actually debuggable.
+    let bytes = resp
+        .bytes()
+        .await
+        .context("reading /v1/chat/completions response body failed (连接被切断)")?;
+    let v: Value = serde_json::from_slice(&bytes).with_context(|| {
+        let preview = truncate(&String::from_utf8_lossy(&bytes), 500);
+        format!(
+            "response body wasn't valid JSON (status {status}, {} bytes): {preview}",
+            bytes.len()
+        )
+    })?;
     extract_content(&v)
+}
+
+fn truncate(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        s.to_string()
+    } else {
+        let head: String = s.chars().take(max).collect();
+        format!("{head}…")
+    }
 }
 
 /// Build the full /v1/chat/completions URL from an endpoint base.
